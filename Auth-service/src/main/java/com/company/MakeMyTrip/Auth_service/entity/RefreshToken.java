@@ -1,7 +1,6 @@
-package com.company.MakeMyTrip.Auth_service.enums;
+package com.company.MakeMyTrip.Auth_service.entity;
 
 
-import com.company.MakeMyTrip.Auth_service.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
