@@ -9,10 +9,20 @@
         <module name="api-gateway" />
         <module name="discovery-server" />
       </profile>
+      <profile name="Annotation profile for Auth-service" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.40/lombok-1.18.40.jar" />
+        </processorPath>
+        <module name="Auth-service" />
+      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="Auth-service" options="-parameters" />
       <module name="api-gateway" options="-parameters" />
       <module name="discovery-server" options="-parameters" />
     </option>
