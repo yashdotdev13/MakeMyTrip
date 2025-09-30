@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.Auth_service.security;
 
-import com.company.BingeBox_backend_application.auth_service.service.JwtService;
+
+import com.company.MakeMyTrip.Auth_service.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;

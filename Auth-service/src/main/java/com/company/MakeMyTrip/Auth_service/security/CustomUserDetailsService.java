@@ -1,8 +1,9 @@
 package com.company.MakeMyTrip.Auth_service.security;
 
 
-import com.company.BingeBox_backend_application.auth_service.entities.User;
-import com.company.BingeBox_backend_application.auth_service.repository.UserRepository;
+
+import com.company.MakeMyTrip.Auth_service.entity.User;
+import com.company.MakeMyTrip.Auth_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
