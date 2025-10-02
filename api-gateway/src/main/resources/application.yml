@@ -1,3 +1,7 @@
+jwt:
+  secretKey: mysupersecurekeyformysafarsaathijwt1234567890abcdefABCDEF1234567890
+
+
 
 server:
   port: 8081
@@ -25,11 +29,16 @@ spring:
           uri: lb://auth-service
           predicates:
             - Path=/auth/**
+          filters:
+            - name: AuthenticationFilter
+
 
         - id: userProfile-service
           uri: lb://userProfile-service
           predicates:
             - Path=/profiles/**
+          filters:
+            - name: AuthenticationFilter
 
 
 

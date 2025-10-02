@@ -5,6 +5,9 @@ import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileResponse;
 
 public interface UserProfileService {
 
-    UserProfileResponse createOrUpdateProfile(Long userId, UserProfileRequest request);
-    UserProfileResponse getProfile(Long userId);
+
+
+    UserProfileResponse createOrUpdateProfile(UserProfileRequest request);
+
+    UserProfileResponse getProfile();
 }

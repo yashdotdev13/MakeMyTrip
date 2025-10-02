@@ -16,16 +16,13 @@ public class UserProfileController {
     private  final UserProfileService profileService;
 
     @PostMapping
-    public ResponseEntity<UserProfileResponse> createOrUpdateProfile(
-            @RequestHeader("X-User-Id") Long userId, // extracted from JWT in API Gateway
-            @RequestBody UserProfileRequest request) {
-
-        return ResponseEntity.ok(profileService.createOrUpdateProfile(userId, request));
+    public ResponseEntity<UserProfileResponse> createOrUpdateProfile(@RequestBody UserProfileRequest request) {
+        return ResponseEntity.ok(profileService.createOrUpdateProfile(request));
     }
 
     @GetMapping
-    public ResponseEntity<UserProfileResponse> getProfile(
-            @RequestHeader("X-User-Id") Long userId) {
-        return ResponseEntity.ok(profileService.getProfile(userId));
+    public ResponseEntity<UserProfileResponse> getProfile() {
+        return ResponseEntity.ok(profileService.getProfile());
     }
+
 }

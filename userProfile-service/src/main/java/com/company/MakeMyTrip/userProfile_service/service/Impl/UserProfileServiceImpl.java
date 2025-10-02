@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.userProfile_service.service.Impl;
 
+import com.company.MakeMyTrip.userProfile_service.auth.UserContextHolder;
 import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileRequest;
 import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileResponse;
 import com.company.MakeMyTrip.userProfile_service.entity.UserProfile;
@@ -21,30 +22,41 @@ public class UserProfileServiceImpl implements UserProfileService {
 
 
     @Override
-    public UserProfileResponse createOrUpdateProfile(Long userId, UserProfileRequest request) {
-       log.info("Creating/updating profile for userId: {}",userId);
+    public UserProfileResponse createOrUpdateProfile(UserProfileRequest request) {
+        Long userId = UserContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw new RuntimeException("User ID not found in context");
+        }
 
-       UserProfile profile = userProfileRepository.findByUserId(userId)
-               .orElse(new UserProfile());
+        log.info("Creating/updating profile for userId: {}", userId);
 
-       profile.setUserId(userId);
-       profile.setFullName(request.getFullName());
-       profile.setPhone(request.getPhone());
-       profile.setAddress(request.getAddress());
-       profile.setPreferences(request.getPreferences());
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElse(new UserProfile());
 
-       UserProfile saved = userProfileRepository.save(profile);
-       log.info("Profile saved for userId: {}",userId);
-       return modelMapper.map(saved, UserProfileResponse.class);
+        profile.setUserId(userId);
+        profile.setFullName(request.getFullName());
+        profile.setPhone(request.getPhone());
+        profile.setAddress(request.getAddress());
+        profile.setPreferences(request.getPreferences());
+
+        UserProfile saved = userProfileRepository.save(profile);
+        log.info("Profile saved for userId: {}", userId);
+        return modelMapper.map(saved, UserProfileResponse.class);
     }
 
 
 
     @Override
-    public UserProfileResponse getProfile(Long userId) {
+    public UserProfileResponse getProfile() {
+        Long userId = UserContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw new RuntimeException("User ID not found in context");
+        }
+
         log.info("Fetching profile for userId: {}", userId);
+
         UserProfile profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(()->new RuntimeException("Profile not found for userId: "+userId));
+                .orElseThrow(() -> new RuntimeException("Profile not found for userId: " + userId));
 
         return modelMapper.map(profile, UserProfileResponse.class);
     }
