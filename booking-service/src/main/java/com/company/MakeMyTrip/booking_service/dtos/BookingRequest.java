@@ -1,0 +1,19 @@
+package com.company.MakeMyTrip.booking_service.dtos;
+
+
+import com.company.MakeMyTrip.booking_service.enums.BookingType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class BookingRequest {
+
+    private BookingType bookingType;  // FLIGHT, HOTEL, BUS, TRAIN
+    private Long referenceId;   // id for the booked entity/ (flightId, hotelId, etc)
+    private Double amount;   // amount for this booking
+}
