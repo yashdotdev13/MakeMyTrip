@@ -92,7 +92,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(String refreshTokenStr) throws InvalidCredentialsException {
         log.info("Refreshing JWT for refresh token: {}", refreshTokenStr);
 
-        RefreshToken refreshToken = refreshTokenRepository.findByName(refreshTokenStr)
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenStr)
                 .orElseThrow(() -> {
                     log.warn("Refresh token not found: {}", refreshTokenStr);
                     return new ResourceNotFoundException("Invalid refresh token");
@@ -108,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtService.generateAccessToken(refreshToken.getUser());
 
         log.info("JWT refreshed successfully for user id: {}", refreshToken.getUser().getId());
-        return new AuthResponse(newAccessToken, refreshToken.getName(), "Bearer");
+        return new AuthResponse(newAccessToken, refreshToken.getToken(), "Bearer");
     }
 
 
@@ -118,12 +118,12 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.deleteByUser(user);
 
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setName(UUID.randomUUID().toString());
+        refreshToken.setToken(UUID.randomUUID().toString());
         refreshToken.setUser(user);
         refreshToken.setExpiryDate(Instant.now().plusSeconds(7 * 24 * 3600)); // 7 days
         refreshTokenRepository.save(refreshToken);
 
         log.info("Refresh token created for user id: {}", user.getId());
-        return refreshToken.getName();
+        return refreshToken.getToken();
     }
 }
