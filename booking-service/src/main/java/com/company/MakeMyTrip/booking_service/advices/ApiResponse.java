@@ -2,11 +2,15 @@ package com.company.MakeMyTrip.booking_service.advices;
 
 
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
+@Builder
+@AllArgsConstructor
 public class ApiResponse<T> {
 
     private LocalDateTime timeStamp;
