@@ -70,11 +70,39 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse updateBooking(Long bookingId, BookingRequest request) {
-        return null;
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("Updating booking with ID:{} for userId: {}", bookingId, userId);
+
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
+                .orElseThrow(()->new RuntimeException("Booking not found with ID: " +bookingId+ " for the current User"));
+
+        booking.setBookingType(request.getBookingType());
+        booking.setReferenceId(request.getReferenceId());
+        booking.setAmount(request.getAmount());
+
+        Booking updatedBooking = bookingRepository.save(booking);
+        log.info("Booking {} updated successfully", bookingId);
+
+        // TODO: send update notifications
+
+        return modelMapper.map(updatedBooking, BookingResponse.class);
     }
 
     @Override
     public void cancelBooking(Long bookingId) {
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("Cancelling booking with ID: {} fpr userId: {}",bookingId, userId);
+
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Booking not found with ID " + bookingId + " for the current user"));
+
+        bookingRepository.delete(booking);
+
+        log.info("Booking cancelled successfully for bookingId: {}",bookingId);
+
+        // TODO: send cancellations notifications
+        // TODO: refund payment if applicable
 
     }
 }
