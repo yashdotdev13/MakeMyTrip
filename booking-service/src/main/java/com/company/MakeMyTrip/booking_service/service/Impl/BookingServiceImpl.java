@@ -12,6 +12,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -44,12 +45,27 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse getBookingById(Long bookingId) {
-        return null;
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("Fetching booking with id: {} for userId: {}",bookingId, userId);
+
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Booking not found with ID " + bookingId + " for the current user"));
+
+        return modelMapper.map(booking, BookingResponse.class);
     }
+
 
     @Override
     public List<BookingResponse> getBookingByUser() {
-        return List.of();
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("Fetching all bookings for userId: {}",userId);
+
+        List<Booking> bookings = bookingRepository.findAllByUserId(userId);
+
+        return bookings.stream()
+                .map(booking-> modelMapper.map(booking, BookingResponse.class))
+                .collect(Collectors.toList());
     }
 
     @Override
