@@ -111,6 +111,13 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponse(newAccessToken, refreshToken.getToken(), "Bearer");
     }
 
+    @Override
+    public void logout(LogoutRequest logoutRequest) {
+        User user = userRepository.findByUsername(logoutRequest.getUsername())
+                .orElseThrow(()->new RuntimeException("User not found"));
+
+        refreshTokenRepository.deleteByUser(user);
+    }
 
 
     private String createRefreshToken(User user) {

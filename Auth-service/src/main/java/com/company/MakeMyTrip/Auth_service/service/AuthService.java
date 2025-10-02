@@ -10,4 +10,6 @@ public interface AuthService {
     AuthResponse login(LoginRequest loginRequest) throws InvalidCredentialsException;
 
     AuthResponse refreshToken(String refreshToken) throws InvalidCredentialsException;
+
+    void logout(LogoutRequest logoutRequest);
 }
