@@ -41,6 +41,14 @@ spring:
             - name: AuthenticationFilter
 
 
+        - id: booking-service
+          uri: lb://booking-service
+          predicates:
+            - Path=/booking/**
+          filters:
+            - name: AuthenticationFilter
+
+
 
 
 eureka:
