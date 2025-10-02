@@ -6,18 +6,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PriceQuote {
+public class PriceLockRequest {
 
     private Long referenceId;
     private String bookingType;
-    private Double basePrice;
     private Double adjustedPrice;
-    private List<String> appliedRules;
-    private boolean locked;
+    private Long userId;
+    private int lockDurationMinutes;
 }

@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.pricing_service.entity;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,20 +14,21 @@ import java.time.LocalDateTime;
 @Builder
 public class PriceLock {
 
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long referenceId; // flightId, hotelId,,etc
 
+    private Long referenceId;
     private String bookingType;
-
     private Long userId;
 
     private Double basePrice;
-    private Double finalPrice;
+    private Double adjustedPrice;
 
     private boolean locked;
 
-    private LocalDateTime validTill;  // until when price is guaranteed
+    private LocalDateTime validTill;
+    private LocalDateTime createdAt;
+
+    private String currency;
 }

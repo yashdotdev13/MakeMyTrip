@@ -1,12 +1,8 @@
 package com.company.MakeMyTrip.pricing_service.entity;
 
-
 import com.company.MakeMyTrip.pricing_service.enums.RuleType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @AllArgsConstructor
@@ -27,6 +23,8 @@ public class PriceRule {
     @Column(nullable = false)
     private Double factor;
 
-    @Column(length = 500)
+    @Column(length = 1000)
     private String condition;
+
+    private boolean active;
 }
