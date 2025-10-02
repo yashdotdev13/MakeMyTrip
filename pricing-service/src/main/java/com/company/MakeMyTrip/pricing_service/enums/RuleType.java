@@ -1,0 +1,9 @@
+package com.company.MakeMyTrip.pricing_service.enums;
+
+public enum RuleType {
+
+    DEMAND,
+    SEASONAL,
+    LAST_MINUTE,
+    PROMOTION
+}
