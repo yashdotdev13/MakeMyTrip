@@ -87,23 +87,21 @@ public class PricingServiceImpl implements PricingService {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Locking price for refId={}, bookingType={}, userId={}", referenceId, bookingType, userId);
 
-        // Get latest quote for locking
+        // Use quantity = 1 or fetch intended quantity from request/context
         PriceQuoteResponse quote = getPriceQuote(referenceId, bookingType, 1, null);
-        double lockedPrice = quote.getAdjustedPrice();
 
         PriceLock lock = PriceLock.builder()
                 .referenceId(referenceId)
                 .bookingType(bookingType)
                 .userId(userId)
                 .basePrice(quote.getBasePrice())
-                .adjustedPrice(lockedPrice)
+                .adjustedPrice(quote.getAdjustedPrice())  // <--- use quote's adjusted price
                 .locked(true)
-                .validTill(LocalDateTime.now().plusMinutes(5))
+                .validTill(LocalDateTime.now().plusMinutes(5)) // 5 mins lock
+                .currency(quote.getCurrency())
                 .build();
 
         PriceLock savedLock = priceLockRepository.save(lock);
-
-        log.info("Price locked successfully for userId={} with lockId={}", userId, savedLock.getId());
 
         return PriceLockResponse.builder()
                 .lockId(savedLock.getId())
@@ -114,6 +112,7 @@ public class PricingServiceImpl implements PricingService {
                 .lockExpiryTime(savedLock.getValidTill().atZone(java.time.ZoneId.systemDefault()).toInstant())
                 .build();
     }
+
 
     @Override
     public boolean releasePriceLock(Long lockId) {

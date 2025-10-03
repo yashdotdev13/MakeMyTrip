@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.pricing_service.controller;
 
+import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteRequest;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.pricing_service.service.PricingService;
@@ -17,18 +18,17 @@ public class PricingController {
     private final PricingService pricingService;
 
     @PostMapping("/quote")
-    public ResponseEntity<PriceQuoteResponse> getPriceQuote(
-            @RequestParam Long referenceId,
-            @RequestParam String bookingType,
-            @RequestParam(defaultValue = "1") int quantity,
-            @RequestParam(required = false) String travelDate
-    ) {
-        log.info("Received request for price quote: refId={}, bookingType={}, quantity={}, travelDate={}",
-                referenceId, bookingType, quantity, travelDate);
-
-        PriceQuoteResponse response = pricingService.getPriceQuote(referenceId, bookingType, quantity, travelDate);
+    public ResponseEntity<PriceQuoteResponse> getPriceQuote(@RequestBody PriceQuoteRequest request) {
+        log.info("Received PriceQuoteRequest: {}", request);
+        PriceQuoteResponse response = pricingService.getPriceQuote(
+                request.getReferenceId(),
+                request.getBookingType(),
+                request.getQuantity(),
+                request.getTravelDate()
+        );
         return ResponseEntity.ok(response);
     }
+
 
 
     @PostMapping("/lock/{referenceId}")
