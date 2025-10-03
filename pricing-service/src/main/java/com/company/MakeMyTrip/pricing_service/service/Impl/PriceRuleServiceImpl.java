@@ -13,6 +13,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -51,16 +52,25 @@ public class PriceRuleServiceImpl implements PriceRuleService {
 
     @Override
     public void deletePriceRule(Long ruleId) {
-
+        log.info("Deleting price rule with id: {}", ruleId);
+        PriceRule rule = priceRuleRepository.findById(ruleId)
+                .orElseThrow(()->new RuntimeException("Price rule not found with id: "+ruleId));
+        priceRuleRepository.delete(rule);
+        log.info("Price rule deleted successfully: {}", ruleId);
     }
 
     @Override
     public List<PriceRuleResponse> getAllPriceRules() {
-        return List.of();
+        List<PriceRule>rules = priceRuleRepository.findAll();
+        return rules.stream()
+                .map(rule-> modelMapper.map(rule, PriceRuleResponse.class))
+                .collect(Collectors.toList());
     }
 
     @Override
     public PriceRuleResponse getPriceRuleById(Long ruleId) {
-        return null;
+        PriceRule rule = priceRuleRepository.findById(ruleId)
+                .orElseThrow(()->new RuntimeException("Price rule not found with id: "+ruleId));
+        return modelMapper.map(rule,PriceRuleResponse.class);
     }
 }
