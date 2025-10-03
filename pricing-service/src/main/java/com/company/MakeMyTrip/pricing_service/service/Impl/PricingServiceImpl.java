@@ -5,7 +5,6 @@ import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteResponse;
 import com.company.MakeMyTrip.pricing_service.entity.PriceLock;
 import com.company.MakeMyTrip.pricing_service.entity.PriceRule;
 import com.company.MakeMyTrip.pricing_service.repository.PriceLockRepository;
-import com.company.MakeMyTrip.pricing_service.repository.PriceRuleRepository;
 import com.company.MakeMyTrip.pricing_service.service.PricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
