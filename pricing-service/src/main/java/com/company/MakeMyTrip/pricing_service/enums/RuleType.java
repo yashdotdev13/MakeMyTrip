@@ -5,5 +5,8 @@ public enum RuleType {
     DEMAND,
     SEASONAL,
     LAST_MINUTE,
-    PROMOTION
+    PROMOTION,
+    CROWD_DEMAND,
+    FESTIVAL,
+    SHORTAGE
 }
