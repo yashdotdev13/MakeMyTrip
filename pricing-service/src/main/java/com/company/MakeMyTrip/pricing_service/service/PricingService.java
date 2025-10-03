@@ -8,14 +8,9 @@ import java.util.List;
 public interface PricingService {
 
 
-    PriceQuoteResponse getPriceQuote(Long referenceId,
-                                     String bookingType,
-                                     Long userId,
-                                     int quantity, String travelDate);
+    PriceQuoteResponse getPriceQuote(Long referenceId, String bookingType, int quantity, String travelDate);
 
-
-    PriceLockResponse lockPrice(Long referenceId,
-                                String bookingType, Long userId);
+    PriceLockResponse lockPrice(Long referenceId, String bookingType);
 
     boolean releasePriceLock(Long lockId);
 

@@ -1,21 +1,22 @@
 package com.company.MakeMyTrip.pricing_service.service.Impl;
 
+import com.company.MakeMyTrip.pricing_service.auth.UserContextHolder;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteResponse;
 import com.company.MakeMyTrip.pricing_service.entity.PriceLock;
 import com.company.MakeMyTrip.pricing_service.entity.PriceRule;
 import com.company.MakeMyTrip.pricing_service.repository.PriceLockRepository;
+import com.company.MakeMyTrip.pricing_service.repository.PriceRuleRepository;
 import com.company.MakeMyTrip.pricing_service.service.PricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.modelmapper.ModelMapper;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 
 @Service
 @Slf4j
@@ -26,21 +27,21 @@ public class PricingServiceImpl implements PricingService {
     private final PriceLockRepository priceLockRepository;
     private final ModelMapper modelMapper;
 
-    private static final double DEFAULT_BASE_PRICE = 1000.0; // TODO: integrate with booking service
-
+    private static final double DEFAULT_BASE_PRICE = 1000.0;
 
     @Override
-    public PriceQuoteResponse getPriceQuote(Long referenceId, String bookingType, Long userId, int quantity, String travelDate) {
+    public PriceQuoteResponse getPriceQuote(Long referenceId, String bookingType, int quantity, String travelDate) {
+        Long userId = UserContextHolder.getCurrentUserId();
         log.info("Generating price quote for refId: {}, bookingType: {}, userId: {}", referenceId, bookingType, userId);
 
-        double basePrice = DEFAULT_BASE_PRICE * quantity; // base * quantity
+        double basePrice = DEFAULT_BASE_PRICE * quantity;
         double adjustedPrice = basePrice;
         List<String> appliedRules = new ArrayList<>();
 
-        // fetch active rules
+        // Fetch all active rules
         List<PriceRule> rules = priceRuleRepository.findAll();
 
-        // apply rules dynamically
+        // Apply rules dynamically
         for (PriceRule rule : rules) {
             switch (rule.getRuleType()) {
                 case CROWD_DEMAND:
@@ -48,17 +49,17 @@ public class PricingServiceImpl implements PricingService {
                     appliedRules.add("Crowd Demand Rule Applied");
                     break;
                 case SEASONAL:
-                    // TODO: check travelDate and apply seasonal factor
+                    // TODO: Apply seasonal pricing based on travelDate
                     adjustedPrice += (basePrice * rule.getFactor());
                     appliedRules.add("Seasonal Pricing Rule Applied");
                     break;
                 case FESTIVAL:
-                    // TODO: detect if travelDate is in a festival period
+                    // TODO: Apply festival pricing based on travelDate
                     adjustedPrice += (basePrice * rule.getFactor());
                     appliedRules.add("Festival Pricing Rule Applied");
                     break;
                 case SHORTAGE:
-                    // TODO: fetch available seats/rooms from inventory
+                    // TODO: Fetch inventory and apply shortage factor
                     adjustedPrice += (basePrice * rule.getFactor());
                     appliedRules.add("Shortage Rule Applied");
                     break;
@@ -77,26 +78,27 @@ public class PricingServiceImpl implements PricingService {
                 .currency("INR")
                 .appliedRules(appliedRules)
                 .locked(false)
-                .expiryTimeSeconds(300L) // 5 mins validity for quote
+                .expiryTimeSeconds(300L)
                 .build();
     }
 
-
     @Override
-    public PriceLockResponse lockPrice(Long referenceId, String bookingType, Long userId) {
-        log.info("Locking price for refId: {}, bookingType: {}, userId: {}", referenceId, bookingType, userId);
+    public PriceLockResponse lockPrice(Long referenceId, String bookingType) {
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("Locking price for refId={}, bookingType={}, userId={}", referenceId, bookingType, userId);
 
-        // TODO: Ideally fetch latest adjusted price first using getPriceQuote()
-        double lockedPrice = DEFAULT_BASE_PRICE;
+        // Get latest quote for locking
+        PriceQuoteResponse quote = getPriceQuote(referenceId, bookingType, 1, null);
+        double lockedPrice = quote.getAdjustedPrice();
 
         PriceLock lock = PriceLock.builder()
                 .referenceId(referenceId)
                 .bookingType(bookingType)
                 .userId(userId)
-                .basePrice(lockedPrice)
-                .adjustedPrice(lockedPrice) // final after adjustments
+                .basePrice(quote.getBasePrice())
+                .adjustedPrice(lockedPrice)
                 .locked(true)
-                .validTill(LocalDateTime.now().plusMinutes(5)) // lock valid for 5 mins
+                .validTill(LocalDateTime.now().plusMinutes(5))
                 .build();
 
         PriceLock savedLock = priceLockRepository.save(lock);
