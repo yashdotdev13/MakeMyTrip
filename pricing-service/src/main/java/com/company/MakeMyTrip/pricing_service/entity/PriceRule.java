@@ -25,6 +25,4 @@ public class PriceRule {
 
     @Column(length = 1000)
     private String condition;
-
-    private boolean active;
 }
