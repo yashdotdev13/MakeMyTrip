@@ -8,5 +8,6 @@ public enum RuleType {
     PROMOTION,
     CROWD_DEMAND,
     FESTIVAL,
-    SHORTAGE
+    SHORTAGE,
+    WEEKEND
 }
