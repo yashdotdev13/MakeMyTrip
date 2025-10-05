@@ -1,7 +1,7 @@
 package com.company.MakeMyTrip.pricing_service.engine;
 
+import com.company.MakeMyTrip.pricing_service.client.BookingServiceClient;
 import com.company.MakeMyTrip.pricing_service.entity.PriceRule;
-import com.company.MakeMyTrip.pricing_service.enums.RuleType;
 import com.company.MakeMyTrip.pricing_service.repository.PriceRuleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +17,8 @@ import java.util.List;
 public class DynamicRuleEngine {
 
     private final PriceRuleRepository priceRuleRepository;
+    private final BookingServiceClient bookingServiceClient; // Feign client
+
 
     public double applyRules(double basePrice, LocalDate travelDate, int quantity, int currentBookings) {
         double adjustedPrice = basePrice;
@@ -30,31 +32,38 @@ public class DynamicRuleEngine {
                 case SEASONAL:
                     if (isWithinSeason(rule, travelDate)) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
+                        log.info("SEASONAL rule applied: factor={}, adjustedPrice={}", rule.getFactor(), adjustedPrice);
                     }
                     break;
 
                 case WEEKEND:
                     if (isWeekend(travelDate)) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
+                        log.info("WEEKEND rule applied: factor={}, adjustedPrice={}", rule.getFactor(), adjustedPrice);
                     }
                     break;
 
                 case DEMAND:
                     if (quantity >= rule.getMinQuantityThreshold()) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
+                        log.info("DEMAND rule applied: minQty={}, factor={}, adjustedPrice={}",
+                                rule.getMinQuantityThreshold(), rule.getFactor(), adjustedPrice);
                     }
                     break;
 
                 case CROWD_DEMAND:
                     if (currentBookings >= rule.getMinQuantityThreshold()) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
+                        log.info("CROWD_DEMAND rule applied: minBookings={}, factor={}, adjustedPrice={}",
+                                rule.getMinQuantityThreshold(), rule.getFactor(), adjustedPrice);
                     }
                     break;
 
                 case SHORTAGE:
-                    // For shortage, lower availability triggers higher price
                     if (currentBookings < rule.getMinQuantityThreshold()) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
+                        log.info("SHORTAGE rule applied: minBookings={}, factor={}, adjustedPrice={}",
+                                rule.getMinQuantityThreshold(), rule.getFactor(), adjustedPrice);
                     }
                     break;
 
@@ -72,8 +81,8 @@ public class DynamicRuleEngine {
     }
 
     private boolean isWithinSeason(PriceRule rule, LocalDate travelDate) {
-        return (rule.getStartDate() != null && rule.getEndDate() != null)
-                && (travelDate.isAfter(rule.getStartDate()) || travelDate.isEqual(rule.getStartDate()))
-                && (travelDate.isBefore(rule.getEndDate()) || travelDate.isEqual(rule.getEndDate()));
+        return rule.getStartDate() != null && rule.getEndDate() != null
+                && !travelDate.isBefore(rule.getStartDate())
+                && !travelDate.isAfter(rule.getEndDate());
     }
 }

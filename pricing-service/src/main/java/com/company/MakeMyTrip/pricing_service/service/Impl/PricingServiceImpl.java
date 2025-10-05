@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.pricing_service.service.Impl;
 
 import com.company.MakeMyTrip.pricing_service.auth.UserContextHolder;
+import com.company.MakeMyTrip.pricing_service.client.BookingServiceClient;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteResponse;
 import com.company.MakeMyTrip.pricing_service.engine.DynamicRuleEngine;
@@ -28,6 +29,7 @@ public class PricingServiceImpl implements PricingService {
     private final PriceLockRepository priceLockRepository;
     private final ModelMapper modelMapper;
     private final DynamicRuleEngine dynamicRuleEngine;
+    private final BookingServiceClient bookingServiceClient; // Feign client integration
 
     private static final double DEFAULT_BASE_PRICE = 1000.0;
 
@@ -36,15 +38,18 @@ public class PricingServiceImpl implements PricingService {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Generating price quote for refId: {}, bookingType: {}, userId: {}", referenceId, bookingType, userId);
 
+        // Base price calculation
         double basePrice = DEFAULT_BASE_PRICE * quantity;
         LocalDate travelDate = travelDateStr != null ? LocalDate.parse(travelDateStr) : LocalDate.now();
 
-        // Fetch current bookings from BookingService (mocked here)
-        int currentBookings = fetchCurrentBookings(referenceId, travelDate);
+        // Fetch current bookings from booking-service
+        int currentBookings = bookingServiceClient.getBookingCount(referenceId, travelDate.toString());
+        log.info("Current bookings for referenceId {} on {}: {}", referenceId, travelDate, currentBookings);
 
-        // Calculate price dynamically
+        // Calculate dynamic price based on rules and current bookings
         double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity, currentBookings);
 
+        // Fetch applied rules for logging/display
         List<String> appliedRules = priceRuleRepository.findAll().stream()
                 .filter(PriceRule::getActive)
                 .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
@@ -60,23 +65,16 @@ public class PricingServiceImpl implements PricingService {
                 .currency("INR")
                 .appliedRules(appliedRules)
                 .locked(false)
-                .expiryTimeSeconds(300L)
+                .expiryTimeSeconds(300L) // 5 min expiry
                 .build();
     }
-
-    // Mock method for now; replace with actual BookingService call
-    private int fetchCurrentBookings(Long referenceId, LocalDate travelDate) {
-        // TODO: Call booking-service API to get current bookings count
-        return 50; // temporary hard-coded value
-    }
-
 
     @Override
     public PriceLockResponse lockPrice(Long referenceId, String bookingType) {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Locking price for refId={}, bookingType={}, userId={}", referenceId, bookingType, userId);
 
-        // Fetch quote for locking (quantity = 1 by default)
+        // Fetch quote for locking (default quantity = 1)
         PriceQuoteResponse quote = getPriceQuote(referenceId, bookingType, 1, null);
 
         PriceLock lock = PriceLock.builder()
@@ -123,13 +121,5 @@ public class PricingServiceImpl implements PricingService {
                 .filter(PriceRule::getActive)
                 .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Mock method to fetch available inventory
-     * TODO: Replace this with actual inventory service/database call
-     */
-    private int fetchAvailableInventory(Long referenceId, String bookingType) {
-        return 10; // Replace with real inventory logic
     }
 }
