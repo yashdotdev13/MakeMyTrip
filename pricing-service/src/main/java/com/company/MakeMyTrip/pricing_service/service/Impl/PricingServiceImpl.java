@@ -46,6 +46,7 @@ public class PricingServiceImpl implements PricingService {
         int currentBookings = bookingServiceClient.getBookingCount(referenceId, travelDate.toString());
         log.info("Current bookings for referenceId {} on {}: {}", referenceId, travelDate, currentBookings);
 
+
         // Calculate dynamic price based on rules and current bookings
         double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity, currentBookings);
 

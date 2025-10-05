@@ -51,9 +51,9 @@ spring:
         - id: pricing-service
           uri: lb://pricing-service
           predicates:
-            - Path=/pricing/**
+           - Path=/pricing/**
           filters:
-            - name: AuthenticationFilter
+           - name: AuthenticationFilter
 
 
 

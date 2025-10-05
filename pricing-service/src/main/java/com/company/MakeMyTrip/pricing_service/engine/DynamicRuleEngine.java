@@ -19,7 +19,6 @@ public class DynamicRuleEngine {
     private final PriceRuleRepository priceRuleRepository;
     private final BookingServiceClient bookingServiceClient; // Feign client
 
-
     public double applyRules(double basePrice, LocalDate travelDate, int quantity, int currentBookings) {
         double adjustedPrice = basePrice;
 
@@ -44,7 +43,7 @@ public class DynamicRuleEngine {
                     break;
 
                 case DEMAND:
-                    if (quantity >= rule.getMinQuantityThreshold()) {
+                    if (rule.getMinQuantityThreshold() != null && quantity >= rule.getMinQuantityThreshold()) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
                         log.info("DEMAND rule applied: minQty={}, factor={}, adjustedPrice={}",
                                 rule.getMinQuantityThreshold(), rule.getFactor(), adjustedPrice);
@@ -52,7 +51,7 @@ public class DynamicRuleEngine {
                     break;
 
                 case CROWD_DEMAND:
-                    if (currentBookings >= rule.getMinQuantityThreshold()) {
+                    if (rule.getMinQuantityThreshold() != null && currentBookings >= rule.getMinQuantityThreshold()) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
                         log.info("CROWD_DEMAND rule applied: minBookings={}, factor={}, adjustedPrice={}",
                                 rule.getMinQuantityThreshold(), rule.getFactor(), adjustedPrice);
@@ -60,7 +59,7 @@ public class DynamicRuleEngine {
                     break;
 
                 case SHORTAGE:
-                    if (currentBookings < rule.getMinQuantityThreshold()) {
+                    if (rule.getMinQuantityThreshold() != null && currentBookings < rule.getMinQuantityThreshold()) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
                         log.info("SHORTAGE rule applied: minBookings={}, factor={}, adjustedPrice={}",
                                 rule.getMinQuantityThreshold(), rule.getFactor(), adjustedPrice);
