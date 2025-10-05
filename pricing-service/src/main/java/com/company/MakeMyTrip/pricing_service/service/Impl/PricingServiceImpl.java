@@ -39,20 +39,18 @@ public class PricingServiceImpl implements PricingService {
         double basePrice = DEFAULT_BASE_PRICE * quantity;
         LocalDate travelDate = travelDateStr != null ? LocalDate.parse(travelDateStr) : LocalDate.now();
 
-        // Fetch available inventory (for SHORTAGE rule)
-        int availableInventory = fetchAvailableInventory(referenceId, bookingType);
+        // Fetch current bookings from BookingService (mocked here)
+        int currentBookings = fetchCurrentBookings(referenceId, travelDate);
 
-        // Apply all dynamic rules using DynamicRuleEngine
-        double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity, availableInventory);
+        // Calculate price dynamically
+        double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity, currentBookings);
 
-        // Collect applied rules for display/logging
         List<String> appliedRules = priceRuleRepository.findAll().stream()
                 .filter(PriceRule::getActive)
                 .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
-                .collect(Collectors.toList());
+                .toList();
 
-        log.info("Price calculated: base={}, adjusted={}, appliedRules={}, availableInventory={}",
-                basePrice, adjustedPrice, appliedRules, availableInventory);
+        log.info("Price calculated: base={}, adjusted={}, appliedRules={}", basePrice, adjustedPrice, appliedRules);
 
         return PriceQuoteResponse.builder()
                 .referenceId(referenceId)
@@ -65,6 +63,13 @@ public class PricingServiceImpl implements PricingService {
                 .expiryTimeSeconds(300L)
                 .build();
     }
+
+    // Mock method for now; replace with actual BookingService call
+    private int fetchCurrentBookings(Long referenceId, LocalDate travelDate) {
+        // TODO: Call booking-service API to get current bookings count
+        return 50; // temporary hard-coded value
+    }
+
 
     @Override
     public PriceLockResponse lockPrice(Long referenceId, String bookingType) {
