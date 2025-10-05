@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -17,77 +18,85 @@ public class DynamicRuleEngine {
 
     private final PriceRuleRepository priceRuleRepository;
 
+    public static class RuleApplicationResult {
+        private double adjustedPrice;
+        private List<String> appliedRules;
 
-    public double applyRules(double basePrice, LocalDate travelDate, int quantity){
-        double adjustedPrice = basePrice;
+        public RuleApplicationResult(double adjustedPrice, List<String> appliedRules) {
+            this.adjustedPrice = adjustedPrice;
+            this.appliedRules = appliedRules;
+        }
 
-        // Fetch all active rules
-        List<PriceRule> allRules = priceRuleRepository.findAll();
-        if (allRules == null || allRules.isEmpty()) {
+        public double getAdjustedPrice() {
             return adjustedPrice;
         }
 
+        public List<String> getAppliedRules() {
+            return appliedRules;
+        }
+    }
+
+    public RuleApplicationResult applyRules(double basePrice, LocalDate travelDate, int quantity, String inventoryType, int availableInventory) {
+        double adjustedPrice = basePrice;
+        List<String> appliedRules = new ArrayList<>();
+
+        List<PriceRule> allRules = priceRuleRepository.findAll();
+
         for (PriceRule rule : allRules) {
-            if (rule.getActive() == null || !rule.getActive()) {
-                continue; // skip inactive rules
-            }
+            if (!rule.getActive()) continue; // skip inactive rules
 
             switch (rule.getRuleType()) {
                 case SEASONAL:
                     if (isWithinSeason(rule, travelDate)) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
-                        log.info("Applied SEASONAL rule (factor={}): new price={}", rule.getFactor(), adjustedPrice);
+                        appliedRules.add("Seasonal Rule Applied");
+                    }
+                    break;
+
+                case FESTIVAL:
+                    if (isWithinSeason(rule, travelDate)) { // use startDate/endDate for festival
+                        adjustedPrice += adjustedPrice * rule.getFactor();
+                        appliedRules.add("Festival Rule Applied");
+                    }
+                    break;
+
+                case CROWD_DEMAND:
+                    adjustedPrice += adjustedPrice * rule.getFactor();
+                    appliedRules.add("Crowd Demand Rule Applied");
+                    break;
+
+                case SHORTAGE:
+                    if (rule.getInventoryType() != null && rule.getInventoryType().equalsIgnoreCase(inventoryType)) {
+                        if (availableInventory <= rule.getMinQuantityThreshold()) {
+                            adjustedPrice += adjustedPrice * rule.getFactor();
+                            appliedRules.add("Shortage Rule Applied");
+                        }
                     }
                     break;
 
                 case WEEKEND:
                     if (isWeekend(travelDate)) {
                         adjustedPrice += adjustedPrice * rule.getFactor();
-                        log.info("Applied WEEKEND rule (factor={}): new price={}", rule.getFactor(), adjustedPrice);
-                    }
-                    break;
-
-                case DEMAND:
-                    if (rule.getMinQuantityThreshold() != null && quantity >= rule.getMinQuantityThreshold()) {
-                        adjustedPrice += adjustedPrice * rule.getFactor();
-                        log.info("Applied DEMAND rule (factor={}): new price={}", rule.getFactor(), adjustedPrice);
-                    }
-                    break;
-
-                case SHORTAGE:
-                    if (rule.getInventoryType() != null && !rule.getInventoryType().isEmpty()) {
-                        // TODO: Fetch actual inventory based on inventoryType and apply factor
-                        adjustedPrice += adjustedPrice * rule.getFactor();
-                        log.info("Applied SHORTAGE rule (factor={}): new price={}", rule.getFactor(), adjustedPrice);
-                    }
-                    break;
-
-                case FESTIVAL:
-                    if (isWithinSeason(rule, travelDate)) { // assuming festival dates stored in start/end
-                        adjustedPrice += adjustedPrice * rule.getFactor();
-                        log.info("Applied FESTIVAL rule (factor={}): new price={}", rule.getFactor(), adjustedPrice);
+                        appliedRules.add("Weekend Rule Applied");
                     }
                     break;
 
                 default:
-                    log.warn("Unknown rule type {} skipped", rule.getRuleType());
+                    log.warn("Unknown RuleType: {}", rule.getRuleType());
             }
         }
 
-        return adjustedPrice;
+        return new RuleApplicationResult(adjustedPrice, appliedRules);
     }
 
     private boolean isWeekend(LocalDate date) {
-        if (date == null) return false;
         DayOfWeek day = date.getDayOfWeek();
         return day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
     }
 
     private boolean isWithinSeason(PriceRule rule, LocalDate travelDate) {
-        if (rule.getStartDate() == null || rule.getEndDate() == null || travelDate == null) {
-            return false;
-        }
-        return ( !travelDate.isBefore(rule.getStartDate()) ) &&
-                ( !travelDate.isAfter(rule.getEndDate()) );
+        return (rule.getStartDate() != null && rule.getEndDate() != null)
+                && (travelDate.isEqual(rule.getStartDate()) || travelDate.isAfter(rule.getStartDate()))
+                && (travelDate.isEqual(rule.getEndDate()) || travelDate.isBefore(rule.getEndDate()));
     }
 }
