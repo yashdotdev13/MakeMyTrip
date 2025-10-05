@@ -3,6 +3,7 @@ package com.company.MakeMyTrip.pricing_service.service.Impl;
 import com.company.MakeMyTrip.pricing_service.auth.UserContextHolder;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteResponse;
+import com.company.MakeMyTrip.pricing_service.engine.DynamicRuleEngine;
 import com.company.MakeMyTrip.pricing_service.entity.PriceLock;
 import com.company.MakeMyTrip.pricing_service.entity.PriceRule;
 import com.company.MakeMyTrip.pricing_service.repository.PriceLockRepository;
@@ -10,11 +11,11 @@ import com.company.MakeMyTrip.pricing_service.repository.PriceRuleRepository;
 import com.company.MakeMyTrip.pricing_service.service.PricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,47 +27,26 @@ public class PricingServiceImpl implements PricingService {
     private final PriceRuleRepository priceRuleRepository;
     private final PriceLockRepository priceLockRepository;
     private final ModelMapper modelMapper;
+    private final DynamicRuleEngine dynamicRuleEngine;
 
     private static final double DEFAULT_BASE_PRICE = 1000.0;
 
     @Override
-    public PriceQuoteResponse getPriceQuote(Long referenceId, String bookingType, int quantity, String travelDate) {
+    public PriceQuoteResponse getPriceQuote(Long referenceId, String bookingType, int quantity, String travelDateStr) {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Generating price quote for refId: {}, bookingType: {}, userId: {}", referenceId, bookingType, userId);
 
         double basePrice = DEFAULT_BASE_PRICE * quantity;
-        double adjustedPrice = basePrice;
-        List<String> appliedRules = new ArrayList<>();
+        LocalDate travelDate = travelDateStr != null ? LocalDate.parse(travelDateStr) : LocalDate.now();
 
-        // Fetch all active rules
-        List<PriceRule> rules = priceRuleRepository.findAll();
+        // Use DynamicRuleEngine to calculate adjusted price
+        double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity);
 
-        // Apply rules dynamically
-        for (PriceRule rule : rules) {
-            switch (rule.getRuleType()) {
-                case CROWD_DEMAND:
-                    adjustedPrice += (basePrice * rule.getFactor());
-                    appliedRules.add("Crowd Demand Rule Applied");
-                    break;
-                case SEASONAL:
-                    // TODO: Apply seasonal pricing based on travelDate
-                    adjustedPrice += (basePrice * rule.getFactor());
-                    appliedRules.add("Seasonal Pricing Rule Applied");
-                    break;
-                case FESTIVAL:
-                    // TODO: Apply festival pricing based on travelDate
-                    adjustedPrice += (basePrice * rule.getFactor());
-                    appliedRules.add("Festival Pricing Rule Applied");
-                    break;
-                case SHORTAGE:
-                    // TODO: Fetch inventory and apply shortage factor
-                    adjustedPrice += (basePrice * rule.getFactor());
-                    appliedRules.add("Shortage Rule Applied");
-                    break;
-                default:
-                    appliedRules.add("Unknown Rule Skipped");
-            }
-        }
+        // Optional: Collect applied rules for logging/display
+        List<String> appliedRules = priceRuleRepository.findAll().stream()
+                .filter(PriceRule::getActive)
+                .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
+                .toList();
 
         log.info("Price calculated: base={}, adjusted={}, appliedRules={}", basePrice, adjustedPrice, appliedRules);
 
@@ -87,7 +67,7 @@ public class PricingServiceImpl implements PricingService {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Locking price for refId={}, bookingType={}, userId={}", referenceId, bookingType, userId);
 
-        // Use quantity = 1 or fetch intended quantity from request/context
+        // Fetch quote for locking (quantity = 1 by default)
         PriceQuoteResponse quote = getPriceQuote(referenceId, bookingType, 1, null);
 
         PriceLock lock = PriceLock.builder()
@@ -95,9 +75,9 @@ public class PricingServiceImpl implements PricingService {
                 .bookingType(bookingType)
                 .userId(userId)
                 .basePrice(quote.getBasePrice())
-                .adjustedPrice(quote.getAdjustedPrice())  // <--- use quote's adjusted price
+                .adjustedPrice(quote.getAdjustedPrice())  // use the dynamically calculated price
                 .locked(true)
-                .validTill(LocalDateTime.now().plusMinutes(5)) // 5 mins lock
+                .validTill(LocalDateTime.now().plusMinutes(5)) // 5 min lock
                 .currency(quote.getCurrency())
                 .build();
 
@@ -112,7 +92,6 @@ public class PricingServiceImpl implements PricingService {
                 .lockExpiryTime(savedLock.getValidTill().atZone(java.time.ZoneId.systemDefault()).toInstant())
                 .build();
     }
-
 
     @Override
     public boolean releasePriceLock(Long lockId) {
@@ -132,6 +111,7 @@ public class PricingServiceImpl implements PricingService {
     public List<String> getAllPriceRules() {
         log.info("Fetching all pricing rules");
         return priceRuleRepository.findAll().stream()
+                .filter(PriceRule::getActive)
                 .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
                 .collect(Collectors.toList());
     }
