@@ -2,6 +2,7 @@ package com.company.MakeMyTrip.pricing_service.service.Impl;
 
 import com.company.MakeMyTrip.pricing_service.auth.UserContextHolder;
 import com.company.MakeMyTrip.pricing_service.client.BookingServiceClient;
+import com.company.MakeMyTrip.pricing_service.dtos.BookingCountResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteResponse;
 import com.company.MakeMyTrip.pricing_service.engine.DynamicRuleEngine;
@@ -43,7 +44,8 @@ public class PricingServiceImpl implements PricingService {
         LocalDate travelDate = travelDateStr != null ? LocalDate.parse(travelDateStr) : LocalDate.now();
 
         // Fetch current bookings from booking-service
-        int currentBookings = bookingServiceClient.getBookingCount(referenceId, travelDate.toString());
+        BookingCountResponse bookingCountResponse = bookingServiceClient.getBookingCount(referenceId, String.valueOf(travelDate));
+        int currentBookings = bookingCountResponse.getCurrentBookings();
         log.info("Current bookings for referenceId {} on {}: {}", referenceId, travelDate, currentBookings);
 
 

@@ -26,9 +26,12 @@ public class PriceRuleServiceImpl implements PriceRuleService {
     public PriceRuleResponse createPriceRule(PriceRuleRequest request) {
         log.info("Creating price rule: {}", request);
 
+        // Convert String to Enum
+        RuleType ruleTypeEnum = RuleType.valueOf(request.getRuleType());
+
         PriceRule rule = PriceRule.builder()
-                .ruleType(RuleType.valueOf(request.getRuleType()))
-                .factor(request.getFactor()) // factor used directly for dynamic calculation
+                .ruleType(ruleTypeEnum)
+                .factor(request.getFactor())
                 .active(true)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
@@ -40,8 +43,20 @@ public class PriceRuleServiceImpl implements PriceRuleService {
         PriceRule savedRule = priceRuleRepository.save(rule);
         log.info("Price rule created successfully with id: {}", savedRule.getId());
 
-        return modelMapper.map(savedRule, PriceRuleResponse.class);
+        // Manual mapping to response DTO
+        return PriceRuleResponse.builder()
+                .id(savedRule.getId())
+                .ruleType(savedRule.getRuleType().name())
+                .factor(savedRule.getFactor())
+                .condition(request.getCondition()) // you can store this in entity later if needed
+                .startDate(savedRule.getStartDate())
+                .endDate(savedRule.getEndDate())
+                .minQuantityThreshold(savedRule.getMinQuantityThreshold())
+                .inventoryType(savedRule.getInventoryType())
+                .description(savedRule.getDescription())
+                .build();
     }
+
 
     @Override
     public PriceRuleResponse updatePriceRule(Long ruleId, PriceRuleRequest request) {

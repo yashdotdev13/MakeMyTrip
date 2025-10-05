@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.booking_service.service;
 
+import com.company.MakeMyTrip.booking_service.dtos.BookingCountResponse;
 import com.company.MakeMyTrip.booking_service.dtos.BookingRequest;
 import com.company.MakeMyTrip.booking_service.dtos.BookingResponse;
 
@@ -17,6 +18,6 @@ public interface BookingService {
 
     void cancelBooking(Long bookingId);
 
-    int getBookingCount(Long referenceId, String travelDate);
+    BookingCountResponse getBookingCount(Long referenceId, String travelDate);
 
 }

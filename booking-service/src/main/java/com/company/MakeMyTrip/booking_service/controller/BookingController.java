@@ -70,12 +70,12 @@ public class BookingController {
         );
     }
 
-    @GetMapping("/count")
-    public ResponseEntity<Integer> getBookingCount(@RequestParam Long referenceId,
-                                                   @RequestParam String travelDate) {
-        log.info("Getting booking count for referenceId={} on travelDate={}", referenceId, travelDate);
-        int count = bookingService.getBookingCount(referenceId, travelDate);
-        return ResponseEntity.ok(count);
-    }
 
+    @GetMapping("/count")
+    public ResponseEntity<BookingCountResponse> getBookingCount(@RequestParam Long referenceId,
+                                                                @RequestParam String travelDate) {
+        log.info("Getting booking count for referenceId={} on travelDate={}", referenceId, travelDate);
+        BookingCountResponse response = bookingService.getBookingCount(referenceId, travelDate);
+        return ResponseEntity.ok(response);
+    }
 }

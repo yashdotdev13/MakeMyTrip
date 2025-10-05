@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.booking_service.service.Impl;
 
 import com.company.MakeMyTrip.booking_service.auth.UserContextHolder;
+import com.company.MakeMyTrip.booking_service.dtos.BookingCountResponse;
 import com.company.MakeMyTrip.booking_service.dtos.BookingRequest;
 import com.company.MakeMyTrip.booking_service.dtos.BookingResponse;
 import com.company.MakeMyTrip.booking_service.entity.Booking;
@@ -108,8 +109,13 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public int getBookingCount(Long referenceId, String travelDate) {
+    public BookingCountResponse getBookingCount(Long referenceId, String travelDate) {
         log.info("Fetching booking count for referenceId={}, travelDate={}", referenceId, travelDate);
-        return bookingRepository.countByReferenceIdAndTravelDate(referenceId, LocalDate.parse(travelDate));
+        int count = bookingRepository.countByReferenceIdAndTravelDate(referenceId, LocalDate.parse(travelDate));
+        return BookingCountResponse.builder()
+                .referenceId(referenceId)
+                .travelDate(travelDate)
+                .currentBookings(count)
+                .build();
     }
 }
