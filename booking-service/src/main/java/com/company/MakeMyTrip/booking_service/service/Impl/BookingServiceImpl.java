@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -109,6 +110,6 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public int getBookingCount(Long referenceId, String travelDate) {
         log.info("Fetching booking count for referenceId={}, travelDate={}", referenceId, travelDate);
-        return bookingRepository.countByReferenceIdAndTravelDate(referenceId, travelDate);
+        return bookingRepository.countByReferenceIdAndTravelDate(referenceId, LocalDate.parse(travelDate));
     }
 }

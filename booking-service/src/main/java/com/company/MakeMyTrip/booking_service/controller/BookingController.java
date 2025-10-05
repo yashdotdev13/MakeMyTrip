@@ -71,18 +71,11 @@ public class BookingController {
     }
 
     @GetMapping("/count")
-    public ResponseEntity<BookingCountResponse> getBookingCount(
-            @RequestParam Long referenceId,
-            @RequestParam String travelDate) {
-
-        int currentBookings = bookingService.getBookingCount(referenceId, travelDate);
-
-        BookingCountResponse response = BookingCountResponse.builder()
-                .referenceId(referenceId)
-                .travelDate(travelDate)
-                .currentBookings(currentBookings)
-                .build();
-
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Integer> getBookingCount(@RequestParam Long referenceId,
+                                                   @RequestParam String travelDate) {
+        log.info("Getting booking count for referenceId={} on travelDate={}", referenceId, travelDate);
+        int count = bookingService.getBookingCount(referenceId, travelDate);
+        return ResponseEntity.ok(count);
     }
+
 }
