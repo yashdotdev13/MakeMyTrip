@@ -2,6 +2,7 @@ package com.company.MakeMyTrip.booking_service.controller;
 
 
 import com.company.MakeMyTrip.booking_service.advices.ApiResponse;
+import com.company.MakeMyTrip.booking_service.dtos.BookingCountResponse;
 import com.company.MakeMyTrip.booking_service.dtos.BookingRequest;
 import com.company.MakeMyTrip.booking_service.dtos.BookingResponse;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
@@ -67,5 +68,21 @@ public class BookingController {
                         .data("Booking with ID " + id + " cancelled successfully")
                         .build()
         );
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<BookingCountResponse> getBookingCount(
+            @RequestParam Long referenceId,
+            @RequestParam String travelDate) {
+
+        int currentBookings = bookingService.getBookingCount(referenceId, travelDate);
+
+        BookingCountResponse response = BookingCountResponse.builder()
+                .referenceId(referenceId)
+                .travelDate(travelDate)
+                .currentBookings(currentBookings)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }

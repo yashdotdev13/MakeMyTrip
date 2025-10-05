@@ -16,4 +16,7 @@ public interface BookingService {
     BookingResponse updateBooking(Long bookingId, BookingRequest request);
 
     void cancelBooking(Long bookingId);
+
+    int getBookingCount(Long referenceId, String travelDate);
+
 }

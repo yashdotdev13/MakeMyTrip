@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -23,6 +24,7 @@ public class BookingResponse {
     private Long referenceId;
     private BookingStatus status;
     private LocalDateTime bookingDate;
+    private LocalDate travelDate;     // <-- NEW FIELD
 
     private Double amount;
 }

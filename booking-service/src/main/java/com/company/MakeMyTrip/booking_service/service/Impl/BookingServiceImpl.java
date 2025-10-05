@@ -105,4 +105,10 @@ public class BookingServiceImpl implements BookingService {
         // TODO: refund payment if applicable
 
     }
+
+    @Override
+    public int getBookingCount(Long referenceId, String travelDate) {
+        log.info("Fetching booking count for referenceId={}, travelDate={}", referenceId, travelDate);
+        return bookingRepository.countByReferenceIdAndTravelDate(referenceId, travelDate);
+    }
 }

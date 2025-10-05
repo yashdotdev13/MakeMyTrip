@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,10 +21,9 @@ import java.time.LocalDateTime;
 public class Booking {
 
     @Id
-    @GeneratedValue(strategy = GenerationType .IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Link to   (coming from JWT/UserContextHolder
     @Column(nullable = false)
     private Long userId;
 
@@ -39,6 +39,9 @@ public class Booking {
     private BookingStatus status = BookingStatus.PENDING;
 
     private LocalDateTime bookingDate = LocalDateTime.now();
+
+    @Column(nullable = false)
+    private LocalDate travelDate;  // <-- ADD THIS
 
     private Double amount;
 }
