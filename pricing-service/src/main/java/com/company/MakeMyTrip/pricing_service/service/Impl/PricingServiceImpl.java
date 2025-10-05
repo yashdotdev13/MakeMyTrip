@@ -39,16 +39,20 @@ public class PricingServiceImpl implements PricingService {
         double basePrice = DEFAULT_BASE_PRICE * quantity;
         LocalDate travelDate = travelDateStr != null ? LocalDate.parse(travelDateStr) : LocalDate.now();
 
-        // Use DynamicRuleEngine to calculate adjusted price
-        double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity);
+        // Fetch available inventory (for SHORTAGE rule)
+        int availableInventory = fetchAvailableInventory(referenceId, bookingType);
 
-        // Optional: Collect applied rules for logging/display
+        // Apply all dynamic rules using DynamicRuleEngine
+        double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity, availableInventory);
+
+        // Collect applied rules for display/logging
         List<String> appliedRules = priceRuleRepository.findAll().stream()
                 .filter(PriceRule::getActive)
                 .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
-                .toList();
+                .collect(Collectors.toList());
 
-        log.info("Price calculated: base={}, adjusted={}, appliedRules={}", basePrice, adjustedPrice, appliedRules);
+        log.info("Price calculated: base={}, adjusted={}, appliedRules={}, availableInventory={}",
+                basePrice, adjustedPrice, appliedRules, availableInventory);
 
         return PriceQuoteResponse.builder()
                 .referenceId(referenceId)
@@ -75,7 +79,7 @@ public class PricingServiceImpl implements PricingService {
                 .bookingType(bookingType)
                 .userId(userId)
                 .basePrice(quote.getBasePrice())
-                .adjustedPrice(quote.getAdjustedPrice())  // use the dynamically calculated price
+                .adjustedPrice(quote.getAdjustedPrice())
                 .locked(true)
                 .validTill(LocalDateTime.now().plusMinutes(5)) // 5 min lock
                 .currency(quote.getCurrency())
@@ -114,5 +118,13 @@ public class PricingServiceImpl implements PricingService {
                 .filter(PriceRule::getActive)
                 .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Mock method to fetch available inventory
+     * TODO: Replace this with actual inventory service/database call
+     */
+    private int fetchAvailableInventory(Long referenceId, String bookingType) {
+        return 10; // Replace with real inventory logic
     }
 }
