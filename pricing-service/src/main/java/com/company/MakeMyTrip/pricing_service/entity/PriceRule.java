@@ -4,6 +4,8 @@ import com.company.MakeMyTrip.pricing_service.enums.RuleType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,11 +25,19 @@ public class PriceRule {
     @Column(nullable = false)
     private Double factor;
 
-    @Column(length = 1000)
-    private String condition;
-
-
     @Column(nullable = false)
     private Boolean active = true;
 
+
+    private LocalDate startDate;
+    private LocalDate endDate;
+
+
+    private Integer minQuantityThreshold;
+
+
+    private String inventoryType;
+
+    @Column(length = 1000)
+    private String description;
 }
