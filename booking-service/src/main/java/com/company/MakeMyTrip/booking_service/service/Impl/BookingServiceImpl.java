@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.booking_service.service.Impl;
 
 import com.company.MakeMyTrip.booking_service.auth.UserContextHolder;
+import com.company.MakeMyTrip.booking_service.dtos.BookingConfirmationResponse;
 import com.company.MakeMyTrip.booking_service.dtos.BookingCountResponse;
 import com.company.MakeMyTrip.booking_service.dtos.BookingRequest;
 import com.company.MakeMyTrip.booking_service.dtos.BookingResponse;
@@ -117,5 +118,10 @@ public class BookingServiceImpl implements BookingService {
                 .travelDate(travelDate)
                 .currentBookings(count)
                 .build();
+    }
+
+    @Override
+    public BookingConfirmationResponse confirmBooking(Long referenceId, String tra) {
+        return null;
     }
 }
