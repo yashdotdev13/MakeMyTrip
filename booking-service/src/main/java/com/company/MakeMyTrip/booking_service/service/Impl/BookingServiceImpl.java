@@ -1,8 +1,10 @@
 package com.company.MakeMyTrip.booking_service.service.Impl;
 
 import com.company.MakeMyTrip.booking_service.auth.UserContextHolder;
+import com.company.MakeMyTrip.booking_service.client.PricingClient;
 import com.company.MakeMyTrip.booking_service.dtos.*;
 import com.company.MakeMyTrip.booking_service.entity.Booking;
+import com.company.MakeMyTrip.booking_service.enums.BookingStatus;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final ModelMapper modelMapper;
+    private final PricingClient pricingClient;
 
 
     @Override
@@ -119,6 +122,72 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request) {
-        return null;
-    }
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("Confirming booking {} for user {}", request.getBookingId(), userId);
+
+        // 1️⃣ Fetch booking
+        Booking booking = bookingRepository.findByIdAndUserId(request.getBookingId(), userId)
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID " + request.getBookingId()));
+
+        // 2️⃣ Validate status
+        if (!booking.getStatus().equals(BookingStatus.PENDING)) {
+            return BookingConfirmationResponse.builder()
+                    .bookingId(booking.getId())
+                    .status(booking.getStatus().name())
+                    .finalPrice(booking.getAmount())
+                    .message("Booking cannot be confirmed. Current status: " + booking.getStatus())
+                    .build();
+        }
+
+        // 3️⃣ Call Pricing Service to validate current price
+        PriceQuoteRequest priceRequest = PriceQuoteRequest.builder()
+                .referenceId(booking.getReferenceId())
+                .bookingType(booking.getBookingType().name())
+                .quantity(1)
+                .userId(userId)
+                .travelDate(booking.getTravelDate().toString())
+                .build();
+
+        PriceQuoteResponse quote = pricingClient.getPriceQuote(priceRequest);
+        Double currentPrice = quote.getAdjustedPrice();
+
+        if (!currentPrice.equals(request.getQuotedPrice())) {
+            return BookingConfirmationResponse.builder()
+                    .bookingId(booking.getId())
+                    .status(booking.getStatus().name())
+                    .finalPrice(currentPrice)
+                    .message("Price has changed. Please review the new price.")
+                    .build();
+        }
+
+        // 4️⃣ Check availability
+        BookingCountResponse countResponse = getBookingCount(booking.getReferenceId(),
+                booking.getTravelDate().toString());
+
+        int maxCapacity = 100; // Replace with actual max capacity per referenceId
+        if (countResponse.getCurrentBookings() >= maxCapacity) {
+            return BookingConfirmationResponse.builder()
+                    .bookingId(booking.getId())
+                    .status(booking.getStatus().name())
+                    .finalPrice(booking.getAmount())
+                    .message("No availability for the selected travel date.")
+                    .build();
+        }
+
+        // 5️⃣ Optional: Lock price for short duration (5 min)
+         pricingClient.lockPrice(booking.getReferenceId(), booking.getBookingType().name());
+
+        // 6️⃣ Update status → AWAITING_PAYMENT
+        booking.setStatus(BookingStatus.AWAITING_PAYMENT);
+        bookingRepository.save(booking);
+
+        log.info("Booking {} confirmed. Status set to AWAITING_PAYMENT", booking.getId());
+
+        return BookingConfirmationResponse.builder()
+                .bookingId(booking.getId())
+                .status(booking.getStatus().name())
+                .finalPrice(booking.getAmount())
+                .message("Booking confirmed. Please proceed to payment.")
+                .build();
+}
 }
