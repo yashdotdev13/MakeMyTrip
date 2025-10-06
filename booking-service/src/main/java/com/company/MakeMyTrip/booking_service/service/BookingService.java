@@ -1,9 +1,6 @@
 package com.company.MakeMyTrip.booking_service.service;
 
-import com.company.MakeMyTrip.booking_service.dtos.BookingConfirmationResponse;
-import com.company.MakeMyTrip.booking_service.dtos.BookingCountResponse;
-import com.company.MakeMyTrip.booking_service.dtos.BookingRequest;
-import com.company.MakeMyTrip.booking_service.dtos.BookingResponse;
+import com.company.MakeMyTrip.booking_service.dtos.*;
 
 import java.util.List;
 
@@ -22,7 +19,7 @@ public interface BookingService {
     BookingCountResponse getBookingCount(Long referenceId, String travelDate);
 
 
-    BookingConfirmationResponse confirmBooking(Long referenceId, String tra);
+    BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request);
 
 
 }

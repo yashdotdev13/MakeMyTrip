@@ -1,10 +1,7 @@
 package com.company.MakeMyTrip.booking_service.service.Impl;
 
 import com.company.MakeMyTrip.booking_service.auth.UserContextHolder;
-import com.company.MakeMyTrip.booking_service.dtos.BookingConfirmationResponse;
-import com.company.MakeMyTrip.booking_service.dtos.BookingCountResponse;
-import com.company.MakeMyTrip.booking_service.dtos.BookingRequest;
-import com.company.MakeMyTrip.booking_service.dtos.BookingResponse;
+import com.company.MakeMyTrip.booking_service.dtos.*;
 import com.company.MakeMyTrip.booking_service.entity.Booking;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
@@ -121,7 +118,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingConfirmationResponse confirmBooking(Long referenceId, String tra) {
+    public BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request) {
         return null;
     }
 }
