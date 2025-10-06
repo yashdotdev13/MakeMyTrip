@@ -2,9 +2,7 @@ package com.company.MakeMyTrip.booking_service.controller;
 
 
 import com.company.MakeMyTrip.booking_service.advices.ApiResponse;
-import com.company.MakeMyTrip.booking_service.dtos.BookingCountResponse;
-import com.company.MakeMyTrip.booking_service.dtos.BookingRequest;
-import com.company.MakeMyTrip.booking_service.dtos.BookingResponse;
+import com.company.MakeMyTrip.booking_service.dtos.*;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +74,14 @@ public class BookingController {
                                                                 @RequestParam String travelDate) {
         log.info("Getting booking count for referenceId={} on travelDate={}", referenceId, travelDate);
         BookingCountResponse response = bookingService.getBookingCount(referenceId, travelDate);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping("/confirm")
+    public ResponseEntity<BookingConfirmationResponse> confirmBooking(@RequestBody BookingConfirmationRequest request){
+        log.info("Received request to confirm booking: {}",request);
+        BookingConfirmationResponse response = bookingService.confirmBooking(request);
         return ResponseEntity.ok(response);
     }
 }
