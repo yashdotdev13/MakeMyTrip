@@ -7,10 +7,7 @@ import com.company.MakeMyTrip.payment_service.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/payment")
@@ -34,6 +31,13 @@ public class PaymentController {
     public ResponseEntity<PaymentResponse> confirmPayment(@RequestBody PaymentConfirmationRequest request){
         log.info("Confirming payment with transactionid={}",request .getTransactionId());
         PaymentResponse response = paymentService.confirmPayment(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/booking/{bookingId}")
+    public ResponseEntity<PaymentResponse> getPaymentByBookingId(@PathVariable Long bookingId){
+        log.info("Fetching payment details for bookingId={}",bookingId);
+        PaymentResponse response = paymentService.getPaymentByBookingId(bookingId);
         return ResponseEntity.ok(response);
     }
 }
