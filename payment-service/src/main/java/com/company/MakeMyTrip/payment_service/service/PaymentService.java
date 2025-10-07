@@ -15,5 +15,4 @@ public interface PaymentService {
      // fetch payment details by bookingId
     PaymentResponse getPaymentByBookingId(Long bookingId);
 
-    RefundResponse refundPayment(RefundRequest request);
 }
