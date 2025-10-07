@@ -63,6 +63,13 @@ spring:
           filters:
             - name: AuthenticationFilter
 
+        - id: review-service
+          uri: lb://review-service
+          predicates:
+            - Path=/review/**
+          filters:
+            - name: AuthenticationFilter
+
 
 
 
