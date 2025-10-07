@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.payment_service.service.Impl;
 
+import com.company.MakeMyTrip.payment_service.auth.UserContextHolder;
 import com.company.MakeMyTrip.payment_service.dtos.PaymentConfirmationRequest;
 import com.company.MakeMyTrip.payment_service.dtos.PaymentRequest;
 import com.company.MakeMyTrip.payment_service.dtos.PaymentResponse;
@@ -26,20 +27,23 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public PaymentResponse initiatePayment(PaymentRequest request) {
         try {
-            log.info("Initiating payment for bookingId={} by userId={}", request.getBookingId(), request.getUserId());
 
+            Long userId = UserContextHolder.getCurrentUserId();
+            log.info("Initiating payment for bookingId={} by userId={}", request.getBookingId(), userId);
+
+            // RazorpayClient razorpayClient = new RazorpayClient(keyId, keySecret);
             JSONObject options = new JSONObject();
             options.put("amount", 1000); // in paise
             options.put("currency", "INR");
             options.put("receipt", "receipt_123");
             options.put("payment_capture", 1);
+            Order order = razorpayClient.orders.create(options); // note lowercase 'orders'
 
-            Order order = razorpayClient.orders.create(options);
 
-
+            // Save payment in DB as PENDING
             Payment payment = Payment.builder()
                     .bookingId(request.getBookingId())
-                    .userId(request.getUserId())
+                    .userId(userId) // <-- use context userId
                     .amount(request.getAmount())
                     .status(PaymentStatus.PENDING)
                     .transactionId(order.get("id"))
@@ -61,7 +65,7 @@ public class PaymentServiceImpl implements PaymentService {
             log.error("Razorpay error: {}", e.getMessage(), e);
             return PaymentResponse.builder()
                     .bookingId(String.valueOf(request.getBookingId()))
-                    .userId(request.getUserId())
+                    .userId(UserContextHolder.getCurrentUserId())
                     .amount(request.getAmount())
                     .status(PaymentStatus.FAILED)
                     .message("Failed to initiate payment: " + e.getMessage())
@@ -71,12 +75,15 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse confirmPayment(PaymentConfirmationRequest request) {
+        Long userId = UserContextHolder.getCurrentUserId(); // <-- fetch from context
         Payment payment = paymentRepository.findByTransactionId(request.getTransactionId())
                 .orElseThrow(() -> new RuntimeException("Payment not found with transactionId " + request.getTransactionId()));
 
-        // For test environment, we can mark payment as SUCCESS manually
+        // For testing, mark as SUCCESS
         payment.setStatus(PaymentStatus.SUCCESS);
         paymentRepository.save(payment);
+
+        log.info("Payment confirmed for transactionId={} by userId={}", request.getTransactionId(), userId);
 
         return PaymentResponse.builder()
                 .paymentId(payment.getId())
@@ -91,6 +98,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
+        Long userId = UserContextHolder.getCurrentUserId(); // <-- fetch from context
         Payment payment = paymentRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new RuntimeException("Payment not found for bookingId " + bookingId));
 
