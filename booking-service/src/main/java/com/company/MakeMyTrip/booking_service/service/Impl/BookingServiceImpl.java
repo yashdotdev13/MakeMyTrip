@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.booking_service.service.Impl;
 
 import com.company.MakeMyTrip.booking_service.auth.UserContextHolder;
+import com.company.MakeMyTrip.booking_service.client.PaymentClient;
 import com.company.MakeMyTrip.booking_service.client.PricingClient;
 import com.company.MakeMyTrip.booking_service.dtos.*;
 import com.company.MakeMyTrip.booking_service.entity.Booking;
@@ -17,7 +18,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -26,23 +26,19 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final ModelMapper modelMapper;
     private final PricingClient pricingClient;
-
+    private final PaymentClient paymentClient; // ✅ Added Payment Client
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
         Long userId = UserContextHolder.getCurrentUserId();
-
-        log.info("Creating booking for userId:{}", userId);
+        log.info("Creating booking for userId: {}", userId);
 
         Booking booking = modelMapper.map(request, Booking.class);
         booking.setUserId(userId);
+        booking.setStatus(BookingStatus.PENDING);
 
         Booking savedBooking = bookingRepository.save(booking);
-
         log.info("Booking created successfully with bookingId: {}", savedBooking.getId());
-
-        // TODO:  send booking confirmation message/email
-        // TODO : integrate payment processing here
 
         return modelMapper.map(savedBooking, BookingResponse.class);
     }
@@ -50,25 +46,23 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingResponse getBookingById(Long bookingId) {
         Long userId = UserContextHolder.getCurrentUserId();
-        log.info("Fetching booking with id: {} for userId: {}",bookingId, userId);
+        log.info("Fetching booking with id: {} for userId: {}", bookingId, userId);
 
         Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Booking not found with ID " + bookingId + " for the current user"));
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID " + bookingId + " for current user"));
 
         return modelMapper.map(booking, BookingResponse.class);
     }
 
-
     @Override
     public List<BookingResponse> getBookingByUser() {
         Long userId = UserContextHolder.getCurrentUserId();
-        log.info("Fetching all bookings for userId: {}",userId);
+        log.info("Fetching all bookings for userId: {}", userId);
 
         List<Booking> bookings = bookingRepository.findAllByUserId(userId);
 
         return bookings.stream()
-                .map(booking-> modelMapper.map(booking, BookingResponse.class))
+                .map(booking -> modelMapper.map(booking, BookingResponse.class))
                 .collect(Collectors.toList());
     }
 
@@ -78,7 +72,7 @@ public class BookingServiceImpl implements BookingService {
         log.info("Updating booking with ID:{} for userId: {}", bookingId, userId);
 
         Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(()->new RuntimeException("Booking not found with ID: " +bookingId+ " for the current User"));
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID: " + bookingId));
 
         booking.setBookingType(request.getBookingType());
         booking.setReferenceId(request.getReferenceId());
@@ -87,27 +81,19 @@ public class BookingServiceImpl implements BookingService {
         Booking updatedBooking = bookingRepository.save(booking);
         log.info("Booking {} updated successfully", bookingId);
 
-        // TODO: send update notifications
-
         return modelMapper.map(updatedBooking, BookingResponse.class);
     }
 
     @Override
     public void cancelBooking(Long bookingId) {
         Long userId = UserContextHolder.getCurrentUserId();
-        log.info("Cancelling booking with ID: {} fpr userId: {}",bookingId, userId);
+        log.info("Cancelling booking with ID: {} for userId: {}", bookingId, userId);
 
         Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Booking not found with ID " + bookingId + " for the current user"));
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID " + bookingId));
 
         bookingRepository.delete(booking);
-
-        log.info("Booking cancelled successfully for bookingId: {}",bookingId);
-
-        // TODO: send cancellations notifications
-        // TODO: refund payment if applicable
-
+        log.info("Booking cancelled successfully for bookingId: {}", bookingId);
     }
 
     @Override
@@ -122,15 +108,14 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request) {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Confirming booking {} for user {}", request.getBookingId(), userId);
 
-        // 1️⃣ Fetch booking
         Booking booking = bookingRepository.findByIdAndUserId(request.getBookingId(), userId)
                 .orElseThrow(() -> new RuntimeException("Booking not found with ID " + request.getBookingId()));
 
-        // 2️⃣ Validate status
         if (!booking.getStatus().equals(BookingStatus.PENDING)) {
             return BookingConfirmationResponse.builder()
                     .bookingId(booking.getId())
@@ -140,26 +125,24 @@ public class BookingServiceImpl implements BookingService {
                     .build();
         }
 
-        // 3️⃣ Fetch latest price from Pricing Service
+        // 3️⃣ Fetch latest price
         PriceQuoteRequest priceRequest = PriceQuoteRequest.builder()
                 .referenceId(booking.getReferenceId())
                 .bookingType(booking.getBookingType().name())
                 .userId(userId)
-                .quantity(1) // assuming 1 ticket/room
+                .quantity(1)
                 .travelDate(booking.getTravelDate().toString())
                 .build();
 
         PriceQuoteResponse quote = pricingClient.getPriceQuote(priceRequest).getData();
-
         if (quote == null || quote.getAdjustedPrice() == null) {
             throw new RuntimeException("Pricing service returned null adjusted price for referenceId " + booking.getReferenceId());
         }
 
         Double currentPrice = quote.getAdjustedPrice();
 
-        // 4️⃣ Compare with user quoted price
+        // 4️⃣ Price validation
         if (!currentPrice.equals(request.getQuotedPrice())) {
-            // Update booking amount with current price
             booking.setAmount(currentPrice);
             bookingRepository.save(booking);
 
@@ -167,39 +150,50 @@ public class BookingServiceImpl implements BookingService {
                     .bookingId(booking.getId())
                     .status(booking.getStatus().name())
                     .finalPrice(currentPrice)
-                    .message("Price has changed. Please review the new price.")
+                    .message("Price has changed. Please review new price.")
                     .build();
         }
 
-        // 5️⃣ Check availability
+        // 5️⃣ Availability check
         BookingCountResponse countResponse = getBookingCount(booking.getReferenceId(), booking.getTravelDate().toString());
-        int maxCapacity = 100; // Replace with actual max capacity per referenceId
+        int maxCapacity = 100;
         if (countResponse.getCurrentBookings() >= maxCapacity) {
             return BookingConfirmationResponse.builder()
                     .bookingId(booking.getId())
                     .status(booking.getStatus().name())
                     .finalPrice(currentPrice)
-                    .message("No availability for the selected travel date.")
+                    .message("No availability for selected travel date.")
                     .build();
         }
 
-        // 6️⃣ Lock price (optional)
+        // 6️⃣ Lock price
         pricingClient.lockPrice(booking.getReferenceId(), booking.getBookingType().name());
 
-        // 7️⃣ Update booking status → AWAITING_PAYMENT
+        // 7️⃣ Update booking status
         booking.setStatus(BookingStatus.AWAITING_PAYMENT);
+        booking.setAmount(currentPrice);
         bookingRepository.save(booking);
 
         log.info("Booking {} confirmed. Status set to AWAITING_PAYMENT", booking.getId());
+
+        // 8️⃣ Initiate Payment automatically
+        try {
+            PaymentRequest paymentRequest = PaymentRequest.builder()
+                    .bookingId(booking.getId())
+                    .amount(booking.getAmount())
+                    .build();
+
+            PaymentResponse paymentResponse = paymentClient.initiatePayment(paymentRequest);
+            log.info("Payment initiated for bookingId={} | Razorpay TxnID={}", booking.getId(), paymentResponse.getTransactionId());
+        } catch (Exception e) {
+            log.error("Payment initiation failed for bookingId={}: {}", booking.getId(), e.getMessage());
+        }
 
         return BookingConfirmationResponse.builder()
                 .bookingId(booking.getId())
                 .status(booking.getStatus().name())
                 .finalPrice(currentPrice)
-                .message("Booking confirmed. Please proceed to payment.")
+                .message("Booking confirmed. Payment initiated.")
                 .build();
     }
-
-
-
 }

@@ -1,24 +1,18 @@
 package com.company.MakeMyTrip.booking_service.dtos;
 
 
-
-import com.company.MakeMyTrip.booking_service.enums.PaymentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
-public class PaymentResponse {
+public class RefundRequest {
 
-    private Long paymentId;
-    private String bookingId;
-    private Long userId;
-    private Double amount;
-    private PaymentStatus status;
     private String transactionId;
+    private Double amount;
     private String message;
 }
