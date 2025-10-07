@@ -1,8 +1,6 @@
 package com.company.MakeMyTrip.payment_service.service;
 
-import com.company.MakeMyTrip.payment_service.dtos.PaymentConfirmationRequest;
-import com.company.MakeMyTrip.payment_service.dtos.PaymentRequest;
-import com.company.MakeMyTrip.payment_service.dtos.PaymentResponse;
+import com.company.MakeMyTrip.payment_service.dtos.*;
 
 public interface PaymentService {
 
@@ -16,4 +14,6 @@ public interface PaymentService {
 
      // fetch payment details by bookingId
     PaymentResponse getPaymentByBookingId(Long bookingId);
+
+    RefundResponse refundPayment(RefundRequest request);
 }

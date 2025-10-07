@@ -1,8 +1,7 @@
 package com.company.MakeMyTrip.payment_service.controller;
 
-import com.company.MakeMyTrip.payment_service.dtos.PaymentConfirmationRequest;
-import com.company.MakeMyTrip.payment_service.dtos.PaymentRequest;
-import com.company.MakeMyTrip.payment_service.dtos.PaymentResponse;
+import com.company.MakeMyTrip.payment_service.advices.ApiResponse;
+import com.company.MakeMyTrip.payment_service.dtos.*;
 import com.company.MakeMyTrip.payment_service.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,4 +39,13 @@ public class PaymentController {
         PaymentResponse response = paymentService.getPaymentByBookingId(bookingId);
         return ResponseEntity.ok(response);
     }
+
+
+
+    @PostMapping("/refund")
+    public ResponseEntity<ApiResponse<RefundResponse>> refundPayment(@RequestBody RefundRequest request) {
+        RefundResponse response = paymentService.refundPayment(request);
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
 }
