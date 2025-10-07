@@ -45,8 +45,13 @@ public class PricingServiceImpl implements PricingService {
 
         // Fetch current bookings from booking-service
         BookingCountResponse bookingCountResponse = bookingServiceClient.getBookingCount(referenceId, String.valueOf(travelDate));
-        int currentBookings = bookingCountResponse.getCurrentBookings();
-        log.info("Current bookings for referenceId {} on {}: {}", referenceId, travelDate, currentBookings);
+
+        int currentBookings = 0;
+        if (bookingCountResponse != null) {
+            currentBookings = bookingCountResponse.getCurrentBookings();
+        } else {
+            log.warn("Booking count response is null for referenceId {}", referenceId);
+        }
 
 
         // Calculate dynamic price based on rules and current bookings

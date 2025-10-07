@@ -149,7 +149,15 @@ public class BookingServiceImpl implements BookingService {
                 .build();
 
         PriceQuoteResponse quote = pricingClient.getPriceQuote(priceRequest);
-        Double currentPrice = quote.getAdjustedPrice();
+        Double currentPrice = quote != null ? quote.getAdjustedPrice() : null;
+
+        log.info("PriceQuoteResponse received: {}", quote);
+
+        if (currentPrice == null) {
+            throw new RuntimeException("Pricing service returned null adjusted price for referenceId " + booking.getReferenceId());
+        }
+
+
 
         if (!currentPrice.equals(request.getQuotedPrice())) {
             return BookingConfirmationResponse.builder()
