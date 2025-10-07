@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.payment_service.service.Impl;
 
-
 import com.company.MakeMyTrip.payment_service.dtos.PaymentConfirmationRequest;
 import com.company.MakeMyTrip.payment_service.dtos.PaymentRequest;
 import com.company.MakeMyTrip.payment_service.dtos.PaymentResponse;
@@ -8,11 +7,9 @@ import com.company.MakeMyTrip.payment_service.entity.Payment;
 import com.company.MakeMyTrip.payment_service.enums.PaymentStatus;
 import com.company.MakeMyTrip.payment_service.repository.PaymentRepository;
 import com.company.MakeMyTrip.payment_service.service.PaymentService;
-import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,28 +20,21 @@ import org.springframework.stereotype.Service;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private static final String STRIPE_API_KEY = "sk_test_XXXXXXXXXXXXXXXXXXXXXXXX"; // Replace with your test secret key
 
-
-    @PostConstruct
-    public void init(){
-        Stripe.apiKey = STRIPE_API_KEY;
-    }
     @Override
     public PaymentResponse initiatePayment(PaymentRequest request) {
-        try{
-            log.info("Initiating payment for bookingId={} by userId={}",request.getBookingId(), request.getUserId());
+        try {
+            log.info("Initiating payment for bookingId={} by userId={}", request.getBookingId(), request.getUserId());
 
-            // fetch the Stripe PaymentInit
             PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                    .setAmount((long) (request.getAmount() * 100)) // Stripe expects amount in cents/paise
+                    .setAmount((long) (request.getAmount() * 100)) // amount in paise
                     .setCurrency("inr")
                     .putMetadata("bookingId", String.valueOf(request.getBookingId()))
                     .putMetadata("userId", String.valueOf(request.getUserId()))
                     .build();
 
             PaymentIntent paymentIntent = PaymentIntent.create(params);
-            // 2️⃣ Save payment in DB as PENDING
+
             Payment payment = Payment.builder()
                     .bookingId(request.getBookingId())
                     .userId(request.getUserId())
@@ -57,7 +47,7 @@ public class PaymentServiceImpl implements PaymentService {
 
             return PaymentResponse.builder()
                     .paymentId(savedPayment.getId())
-                    .bookingId(String.valueOf(savedPayment.getBookingId()))
+                    .bookingId(savedPayment.getBookingId())
                     .userId(savedPayment.getUserId())
                     .amount(savedPayment.getAmount())
                     .status(savedPayment.getStatus())
@@ -66,9 +56,9 @@ public class PaymentServiceImpl implements PaymentService {
                     .build();
 
         } catch (StripeException e) {
-            log.error("Stripe error: {}", e.getMessage(), e);
+            log.error("Stripe error during initiation: {}", e.getMessage(), e);
             return PaymentResponse.builder()
-                    .bookingId(String.valueOf(request.getBookingId()))
+                    .bookingId(request.getBookingId())
                     .userId(request.getUserId())
                     .amount(request.getAmount())
                     .status(PaymentStatus.FAILED)
@@ -79,21 +69,21 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse confirmPayment(PaymentConfirmationRequest request) {
-        try{
-            log.info("Confirming payment with transactionId={}",request.getTransactionId());
+        try {
+            log.info("Confirming payment with transactionId={}", request.getTransactionId());
 
             Payment payment = paymentRepository.findByTransactionId(request.getTransactionId())
-                    .orElseThrow(()->new RuntimeException("Payment not found with transactionId "+request.getTransactionId()));
+                    .orElseThrow(() -> new RuntimeException("Payment not found with transactionId " + request.getTransactionId()));
 
-            //retrieve payment intent from stripe
             PaymentIntent paymentIntent = PaymentIntent.retrieve(request.getTransactionId());
 
             if ("succeeded".equals(paymentIntent.getStatus())) {
                 payment.setStatus(PaymentStatus.SUCCESS);
                 paymentRepository.save(payment);
+
                 return PaymentResponse.builder()
                         .paymentId(payment.getId())
-                        .bookingId(String.valueOf(payment.getBookingId()))
+                        .bookingId(payment.getBookingId())
                         .userId(payment.getUserId())
                         .amount(payment.getAmount())
                         .status(payment.getStatus())
@@ -103,9 +93,10 @@ public class PaymentServiceImpl implements PaymentService {
             } else {
                 payment.setStatus(PaymentStatus.FAILED);
                 paymentRepository.save(payment);
+
                 return PaymentResponse.builder()
                         .paymentId(payment.getId())
-                        .bookingId(String.valueOf(payment.getBookingId()))
+                        .bookingId(payment.getBookingId())
                         .userId(payment.getUserId())
                         .amount(payment.getAmount())
                         .status(payment.getStatus())
@@ -127,7 +118,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         return PaymentResponse.builder()
                 .paymentId(payment.getId())
-                .bookingId(String.valueOf(payment.getBookingId()))
+                .bookingId(payment.getBookingId())
                 .userId(payment.getUserId())
                 .amount(payment.getAmount())
                 .status(payment.getStatus())
