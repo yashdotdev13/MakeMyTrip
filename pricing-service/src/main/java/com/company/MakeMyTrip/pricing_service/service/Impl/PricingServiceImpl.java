@@ -5,6 +5,7 @@ import com.company.MakeMyTrip.pricing_service.client.BookingServiceClient;
 import com.company.MakeMyTrip.pricing_service.dtos.BookingCountResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.pricing_service.dtos.PriceQuoteResponse;
+import com.company.MakeMyTrip.pricing_service.advices.ApiResponse;
 import com.company.MakeMyTrip.pricing_service.engine.DynamicRuleEngine;
 import com.company.MakeMyTrip.pricing_service.entity.PriceLock;
 import com.company.MakeMyTrip.pricing_service.entity.PriceRule;
@@ -44,15 +45,9 @@ public class PricingServiceImpl implements PricingService {
         LocalDate travelDate = travelDateStr != null ? LocalDate.parse(travelDateStr) : LocalDate.now();
 
         // Fetch current bookings from booking-service
-        BookingCountResponse bookingCountResponse = bookingServiceClient.getBookingCount(referenceId, String.valueOf(travelDate));
-
-        int currentBookings = 0;
-        if (bookingCountResponse != null) {
-            currentBookings = bookingCountResponse.getCurrentBookings();
-        } else {
-            log.warn("Booking count response is null for referenceId {}", referenceId);
-        }
-
+        BookingCountResponse bookingCountResponse = bookingServiceClient.getBookingCount(referenceId, travelDate.toString());
+        int currentBookings = (bookingCountResponse != null) ? bookingCountResponse.getCurrentBookings() : 0;
+        log.info("Current bookings for referenceId {} on {}: {}", referenceId, travelDate, currentBookings);
 
         // Calculate dynamic price based on rules and current bookings
         double adjustedPrice = dynamicRuleEngine.applyRules(basePrice, travelDate, quantity, currentBookings);
@@ -61,7 +56,7 @@ public class PricingServiceImpl implements PricingService {
         List<String> appliedRules = priceRuleRepository.findAll().stream()
                 .filter(PriceRule::getActive)
                 .map(rule -> rule.getRuleType().name() + " (" + rule.getFactor() + ")")
-                .toList();
+                .collect(Collectors.toList());
 
         log.info("Price calculated: base={}, adjusted={}, appliedRules={}", basePrice, adjustedPrice, appliedRules);
 
