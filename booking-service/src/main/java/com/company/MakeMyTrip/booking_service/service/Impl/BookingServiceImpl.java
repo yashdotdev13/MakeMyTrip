@@ -7,6 +7,7 @@ import com.company.MakeMyTrip.booking_service.entity.Booking;
 import com.company.MakeMyTrip.booking_service.enums.BookingStatus;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -139,27 +140,29 @@ public class BookingServiceImpl implements BookingService {
                     .build();
         }
 
-        // 3️⃣ Call Pricing Service to validate current price
+        // 3️⃣ Fetch latest price from Pricing Service
         PriceQuoteRequest priceRequest = PriceQuoteRequest.builder()
                 .referenceId(booking.getReferenceId())
                 .bookingType(booking.getBookingType().name())
-                .quantity(1)
                 .userId(userId)
+                .quantity(1) // assuming 1 ticket/room
                 .travelDate(booking.getTravelDate().toString())
                 .build();
 
-        PriceQuoteResponse quote = pricingClient.getPriceQuote(priceRequest);
-        Double currentPrice = quote != null ? quote.getAdjustedPrice() : null;
+        PriceQuoteResponse quote = pricingClient.getPriceQuote(priceRequest).getData();
 
-        log.info("PriceQuoteResponse received: {}", quote);
-
-        if (currentPrice == null) {
+        if (quote == null || quote.getAdjustedPrice() == null) {
             throw new RuntimeException("Pricing service returned null adjusted price for referenceId " + booking.getReferenceId());
         }
 
+        Double currentPrice = quote.getAdjustedPrice();
 
-
+        // 4️⃣ Compare with user quoted price
         if (!currentPrice.equals(request.getQuotedPrice())) {
+            // Update booking amount with current price
+            booking.setAmount(currentPrice);
+            bookingRepository.save(booking);
+
             return BookingConfirmationResponse.builder()
                     .bookingId(booking.getId())
                     .status(booking.getStatus().name())
@@ -168,24 +171,22 @@ public class BookingServiceImpl implements BookingService {
                     .build();
         }
 
-        // 4️⃣ Check availability
-        BookingCountResponse countResponse = getBookingCount(booking.getReferenceId(),
-                booking.getTravelDate().toString());
-
+        // 5️⃣ Check availability
+        BookingCountResponse countResponse = getBookingCount(booking.getReferenceId(), booking.getTravelDate().toString());
         int maxCapacity = 100; // Replace with actual max capacity per referenceId
         if (countResponse.getCurrentBookings() >= maxCapacity) {
             return BookingConfirmationResponse.builder()
                     .bookingId(booking.getId())
                     .status(booking.getStatus().name())
-                    .finalPrice(booking.getAmount())
+                    .finalPrice(currentPrice)
                     .message("No availability for the selected travel date.")
                     .build();
         }
 
-        // 5️⃣ Optional: Lock price for short duration (5 min)
-         pricingClient.lockPrice(booking.getReferenceId(), booking.getBookingType().name());
+        // 6️⃣ Lock price (optional)
+        pricingClient.lockPrice(booking.getReferenceId(), booking.getBookingType().name());
 
-        // 6️⃣ Update status → AWAITING_PAYMENT
+        // 7️⃣ Update booking status → AWAITING_PAYMENT
         booking.setStatus(BookingStatus.AWAITING_PAYMENT);
         bookingRepository.save(booking);
 
@@ -194,8 +195,11 @@ public class BookingServiceImpl implements BookingService {
         return BookingConfirmationResponse.builder()
                 .bookingId(booking.getId())
                 .status(booking.getStatus().name())
-                .finalPrice(booking.getAmount())
+                .finalPrice(currentPrice)
                 .message("Booking confirmed. Please proceed to payment.")
                 .build();
-}
+    }
+
+
+
 }
