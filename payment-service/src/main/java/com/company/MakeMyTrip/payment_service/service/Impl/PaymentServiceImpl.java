@@ -79,11 +79,60 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse confirmPayment(PaymentConfirmationRequest request) {
-        return null;
+        try{
+            log.info("Confirming payment with transactionId={}",request.getTransactionId());
+
+            Payment payment = paymentRepository.findByTransactionId(request.getTransactionId())
+                    .orElseThrow(()->new RuntimeException("Payment not found with transactionId "+request.getTransactionId()));
+
+            //retrieve payment intent from stripe
+            PaymentIntent paymentIntent = PaymentIntent.retrieve(request.getTransactionId());
+
+            if ("succeeded".equals(paymentIntent.getStatus())) {
+                payment.setStatus(PaymentStatus.SUCCESS);
+                paymentRepository.save(payment);
+                return PaymentResponse.builder()
+                        .paymentId(payment.getId())
+                        .bookingId(String.valueOf(payment.getBookingId()))
+                        .userId(payment.getUserId())
+                        .amount(payment.getAmount())
+                        .status(payment.getStatus())
+                        .transactionId(payment.getTransactionId())
+                        .message("Payment successful.")
+                        .build();
+            } else {
+                payment.setStatus(PaymentStatus.FAILED);
+                paymentRepository.save(payment);
+                return PaymentResponse.builder()
+                        .paymentId(payment.getId())
+                        .bookingId(String.valueOf(payment.getBookingId()))
+                        .userId(payment.getUserId())
+                        .amount(payment.getAmount())
+                        .status(payment.getStatus())
+                        .transactionId(payment.getTransactionId())
+                        .message("Payment failed or is pending.")
+                        .build();
+            }
+
+        } catch (StripeException e) {
+            log.error("Stripe error during confirmation: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to confirm payment: " + e.getMessage());
+        }
     }
 
     @Override
     public PaymentResponse getPaymentByBookingId(Long bookingId) {
-        return null;
+        Payment payment = paymentRepository.findByBookingId(bookingId)
+                .orElseThrow(() -> new RuntimeException("Payment not found for bookingId " + bookingId));
+
+        return PaymentResponse.builder()
+                .paymentId(payment.getId())
+                .bookingId(String.valueOf(payment.getBookingId()))
+                .userId(payment.getUserId())
+                .amount(payment.getAmount())
+                .status(payment.getStatus())
+                .transactionId(payment.getTransactionId())
+                .message("Payment details fetched successfully.")
+                .build();
     }
 }
