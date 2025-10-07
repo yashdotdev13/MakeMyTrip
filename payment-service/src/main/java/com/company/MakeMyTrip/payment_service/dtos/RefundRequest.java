@@ -1,4 +1,4 @@
-package com.company.MakeMyTrip.booking_service.dtos;
+package com.company.MakeMyTrip.payment_service.dtos;
 
 
 import lombok.AllArgsConstructor;
