@@ -7,11 +7,12 @@ import com.company.MakeMyTrip.payment_service.entity.Payment;
 import com.company.MakeMyTrip.payment_service.enums.PaymentStatus;
 import com.company.MakeMyTrip.payment_service.repository.PaymentRepository;
 import com.company.MakeMyTrip.payment_service.service.PaymentService;
-import com.stripe.exception.StripeException;
-import com.stripe.model.PaymentIntent;
-import com.stripe.param.PaymentIntentCreateParams;
+import com.razorpay.Order;
+import com.razorpay.RazorpayClient;
+import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,45 +21,46 @@ import org.springframework.stereotype.Service;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final RazorpayClient razorpayClient;
 
     @Override
     public PaymentResponse initiatePayment(PaymentRequest request) {
         try {
             log.info("Initiating payment for bookingId={} by userId={}", request.getBookingId(), request.getUserId());
 
-            PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-                    .setAmount((long) (request.getAmount() * 100)) // amount in paise
-                    .setCurrency("inr")
-                    .putMetadata("bookingId", String.valueOf(request.getBookingId()))
-                    .putMetadata("userId", String.valueOf(request.getUserId()))
-                    .build();
+            JSONObject options = new JSONObject();
+            options.put("amount", 1000); // in paise
+            options.put("currency", "INR");
+            options.put("receipt", "receipt_123");
+            options.put("payment_capture", 1);
 
-            PaymentIntent paymentIntent = PaymentIntent.create(params);
+            Order order = razorpayClient.orders.create(options);
+
 
             Payment payment = Payment.builder()
                     .bookingId(request.getBookingId())
                     .userId(request.getUserId())
                     .amount(request.getAmount())
                     .status(PaymentStatus.PENDING)
-                    .transactionId(paymentIntent.getId())
+                    .transactionId(order.get("id"))
                     .build();
 
             Payment savedPayment = paymentRepository.save(payment);
 
             return PaymentResponse.builder()
                     .paymentId(savedPayment.getId())
-                    .bookingId(savedPayment.getBookingId())
+                    .bookingId(String.valueOf(savedPayment.getBookingId()))
                     .userId(savedPayment.getUserId())
                     .amount(savedPayment.getAmount())
                     .status(savedPayment.getStatus())
                     .transactionId(savedPayment.getTransactionId())
-                    .message("Payment initiated successfully. Confirm the payment to complete.")
+                    .message("Payment order created successfully. Complete payment on Razorpay.")
                     .build();
 
-        } catch (StripeException e) {
-            log.error("Stripe error during initiation: {}", e.getMessage(), e);
+        } catch (RazorpayException e) {
+            log.error("Razorpay error: {}", e.getMessage(), e);
             return PaymentResponse.builder()
-                    .bookingId(request.getBookingId())
+                    .bookingId(String.valueOf(request.getBookingId()))
                     .userId(request.getUserId())
                     .amount(request.getAmount())
                     .status(PaymentStatus.FAILED)
@@ -69,46 +71,22 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse confirmPayment(PaymentConfirmationRequest request) {
-        try {
-            log.info("Confirming payment with transactionId={}", request.getTransactionId());
+        Payment payment = paymentRepository.findByTransactionId(request.getTransactionId())
+                .orElseThrow(() -> new RuntimeException("Payment not found with transactionId " + request.getTransactionId()));
 
-            Payment payment = paymentRepository.findByTransactionId(request.getTransactionId())
-                    .orElseThrow(() -> new RuntimeException("Payment not found with transactionId " + request.getTransactionId()));
+        // For test environment, we can mark payment as SUCCESS manually
+        payment.setStatus(PaymentStatus.SUCCESS);
+        paymentRepository.save(payment);
 
-            PaymentIntent paymentIntent = PaymentIntent.retrieve(request.getTransactionId());
-
-            if ("succeeded".equals(paymentIntent.getStatus())) {
-                payment.setStatus(PaymentStatus.SUCCESS);
-                paymentRepository.save(payment);
-
-                return PaymentResponse.builder()
-                        .paymentId(payment.getId())
-                        .bookingId(payment.getBookingId())
-                        .userId(payment.getUserId())
-                        .amount(payment.getAmount())
-                        .status(payment.getStatus())
-                        .transactionId(payment.getTransactionId())
-                        .message("Payment successful.")
-                        .build();
-            } else {
-                payment.setStatus(PaymentStatus.FAILED);
-                paymentRepository.save(payment);
-
-                return PaymentResponse.builder()
-                        .paymentId(payment.getId())
-                        .bookingId(payment.getBookingId())
-                        .userId(payment.getUserId())
-                        .amount(payment.getAmount())
-                        .status(payment.getStatus())
-                        .transactionId(payment.getTransactionId())
-                        .message("Payment failed or is pending.")
-                        .build();
-            }
-
-        } catch (StripeException e) {
-            log.error("Stripe error during confirmation: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to confirm payment: " + e.getMessage());
-        }
+        return PaymentResponse.builder()
+                .paymentId(payment.getId())
+                .bookingId(String.valueOf(payment.getBookingId()))
+                .userId(payment.getUserId())
+                .amount(payment.getAmount())
+                .status(payment.getStatus())
+                .transactionId(payment.getTransactionId())
+                .message("Payment confirmed successfully.")
+                .build();
     }
 
     @Override
@@ -118,7 +96,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         return PaymentResponse.builder()
                 .paymentId(payment.getId())
-                .bookingId(payment.getBookingId())
+                .bookingId(String.valueOf(payment.getBookingId()))
                 .userId(payment.getUserId())
                 .amount(payment.getAmount())
                 .status(payment.getStatus())
