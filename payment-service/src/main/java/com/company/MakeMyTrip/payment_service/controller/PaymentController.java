@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.payment_service.controller;
 
+import com.company.MakeMyTrip.payment_service.dtos.PaymentConfirmationRequest;
 import com.company.MakeMyTrip.payment_service.dtos.PaymentRequest;
 import com.company.MakeMyTrip.payment_service.dtos.PaymentResponse;
 import com.company.MakeMyTrip.payment_service.service.PaymentService;
@@ -25,6 +26,14 @@ public class PaymentController {
         log.info("Initiating payment for bookingId={}, userId={}",request.getBookingId(), request.getUserId());
 
         PaymentResponse response = paymentService.initiatePayment(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // confirm the payment after client completes stripe payment
+    @PostMapping("/confirm")
+    public ResponseEntity<PaymentResponse> confirmPayment(@RequestBody PaymentConfirmationRequest request){
+        log.info("Confirming payment with transactionid={}",request .getTransactionId());
+        PaymentResponse response = paymentService.confirmPayment(request);
         return ResponseEntity.ok(response);
     }
 }
