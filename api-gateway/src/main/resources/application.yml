@@ -56,6 +56,14 @@ spring:
            - name: AuthenticationFilter
 
 
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/payment/**
+          filters:
+            - name: AuthenticationFilter
+
+
 
 
 eureka:

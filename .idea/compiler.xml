@@ -8,7 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="discovery-server" />
       </profile>
-      <profile name="Annotation profile for pricing-service" enabled="true">
+      <profile name="Annotation profile for payment-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -17,6 +17,7 @@
         </processorPath>
         <module name="api-gateway" />
         <module name="userProfile-service" />
+        <module name="payment-service" />
         <module name="Auth-service" />
         <module name="pricing-service" />
         <module name="booking-service" />
@@ -29,6 +30,7 @@
       <module name="api-gateway" options="-parameters" />
       <module name="booking-service" options="-parameters" />
       <module name="discovery-server" options="-parameters" />
+      <module name="payment-service" options="-parameters" />
       <module name="pricing-service" options="-parameters" />
       <module name="userProfile-service" options="-parameters" />
     </option>
