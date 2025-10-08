@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -68,7 +69,12 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     public List<ReviewResponse> getReviewByBookingId(Long bookingId) {
-        return List.of();
+        log.info("Fetching all reviews for bookingId={}", bookingId);
+
+        return reviewRepository.findByBookingId(bookingId)
+                .stream()
+                .map(review->modelMapper.map(review, ReviewResponse.class))
+                .collect(Collectors.toList());
     }
 
     @Override
