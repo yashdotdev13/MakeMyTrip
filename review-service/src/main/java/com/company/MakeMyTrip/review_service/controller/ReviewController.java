@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/review")
@@ -23,7 +22,7 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     /**
-     * Create a new review for a booking.
+     * Create a new review for a booking
      */
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(@RequestBody ReviewRequest request) {
@@ -31,11 +30,11 @@ public class ReviewController {
         log.info("User {} is creating a review for bookingId={}", userId, request.getBookingId());
 
         ReviewResponse response = reviewService.createReview(request);
-        return ResponseEntity.ok(new ApiResponse<>("Review created successfully", response));
+        return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
     /**
-     * Update an existing review (only by owner).
+     * Update an existing review (only by owner)
      */
     @PutMapping("/{reviewId}")
     public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
@@ -46,44 +45,43 @@ public class ReviewController {
         log.info("User {} is attempting to update reviewId={}", userId, reviewId);
 
         ReviewResponse response = reviewService.updateReview(reviewId, request);
-        return ResponseEntity.ok(new ApiResponse<>("Review updated successfully", response));
+        return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
     /**
-     * Get all reviews for a specific booking.
+     * Get all reviews for a specific booking
      */
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<ApiResponse<List<ReviewResponse>>> getReviewsByBookingId(@PathVariable Long bookingId) {
         log.info("Fetching reviews for bookingId={}", bookingId);
 
         List<ReviewResponse> responses = reviewService.getReviewByBookingId(bookingId);
-        return ResponseEntity.ok(new ApiResponse<>("Reviews fetched successfully", responses));
+        return ResponseEntity.ok(new ApiResponse<>(responses));
     }
 
     /**
-     * Get review summary (average rating + total count) for a booking.
+     * Get review summary (average rating + total count) for a booking
      */
     @GetMapping("/booking/{bookingId}/summary")
     public ResponseEntity<ApiResponse<ReviewSummaryResponse>> getReviewSummary(@PathVariable Long bookingId) {
         log.info("Fetching review summary for bookingId={}", bookingId);
 
         ReviewSummaryResponse response = reviewService.getReviewSummaryByBookingId(bookingId);
-        return ResponseEntity.ok(new ApiResponse<>("Review summary fetched successfully", response));
+        return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
     /**
-     * Get the logged-in user's review for a specific booking.
+     * Get a user's review for a specific booking
      */
     @GetMapping("/booking/{bookingId}/my-review")
-    public ResponseEntity<ApiResponse<ReviewResponse>> getMyReviewForBooking(@PathVariable Long bookingId) {
+    public ResponseEntity<ApiResponse<?>> getMyReviewForBooking(@PathVariable Long bookingId) {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Fetching review for userId={} and bookingId={}", userId, bookingId);
 
-        Optional<ReviewResponse> review = reviewService.getReviewByBookingIdAndUserId(bookingId, userId);
-        if (review.isPresent()) {
-            return ResponseEntity.ok(new ApiResponse<>("Review fetched successfully", review.get()));
-        } else {
-            return ResponseEntity.ok(new ApiResponse<>("No review found for this booking", null));
-        }
+        return reviewService.getReviewByBookingIdAndUserId(bookingId, userId)
+                .<ResponseEntity<ApiResponse<?>>>map(review ->
+                        ResponseEntity.ok(new ApiResponse<>(review)))
+                .orElseGet(() ->
+                        ResponseEntity.ok(new ApiResponse<>("No review found for this booking")));
     }
 }
