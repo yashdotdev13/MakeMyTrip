@@ -79,11 +79,35 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     public Optional<ReviewResponse> getReviewByBookingIdAndUserId(Long bookingId, Long userId) {
-        return Optional.empty();
+        log.info("Fetching review for bookingId={} and  userId={}",bookingId,userId);
+
+        return reviewRepository.findByBookingIdAndUserId(bookingId, userId)
+                .map(review->modelMapper.map(review, ReviewResponse.class));
     }
 
     @Override
     public ReviewSummaryResponse getReviewSummaryByBookingId(Long bookingId) {
-        return null;
+       log.info("Fetching review summary for bookingId={}",bookingId);
+
+       List<Review> reviews = reviewRepository.findByBookingId(bookingId);
+       if(reviews.isEmpty()){
+           log.warn("No reviews found for booking={}",bookingId);
+           return new ReviewSummaryResponse(bookingId, (double) 0, 0.0);
+       }
+
+       double avgRating = reviews.stream()
+               .mapToInt(Review::getRating)
+               .average()
+               .orElse(0.0);
+
+        ReviewSummaryResponse summary = new ReviewSummaryResponse(
+                bookingId,
+                (double) reviews.size(),
+                Math.round(avgRating * 10.0) / 10.0
+        );
+
+        log.info("Review summary for bookingId={} -> totalReview={}, avgRating={}",
+                bookingId, summary.getTotalReviews(), summary.getAverageRating());
+        return summary;
     }
 }

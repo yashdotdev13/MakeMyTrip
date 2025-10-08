@@ -14,5 +14,5 @@ public class ReviewSummaryResponse {
 
     private Long bookingId;
     private Double averageRating;
-    private Long totalReviews;
+    private Double totalReviews;
 }
