@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.review_service.controller;
 
-
 import com.company.MakeMyTrip.review_service.advices.ApiResponse;
 import com.company.MakeMyTrip.review_service.auth.UserContextHolder;
 import com.company.MakeMyTrip.review_service.dtos.ReviewRequest;
@@ -13,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/review")
@@ -22,7 +22,9 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
-    // create a new review for booking
+    /**
+     * Create a new review for a booking.
+     */
     @PostMapping
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(@RequestBody ReviewRequest request) {
         Long userId = UserContextHolder.getCurrentUserId();
@@ -55,7 +57,7 @@ public class ReviewController {
         log.info("Fetching reviews for bookingId={}", bookingId);
 
         List<ReviewResponse> responses = reviewService.getReviewByBookingId(bookingId);
-        return ResponseEntity.ok(new ApiResponse<>("Reviews fetched successfully", (ReviewResponse) responses));
+        return ResponseEntity.ok(new ApiResponse<>("Reviews fetched successfully", responses));
     }
 
     /**
@@ -70,15 +72,18 @@ public class ReviewController {
     }
 
     /**
-     * Get a user's review for a specific booking (optional).
+     * Get the logged-in user's review for a specific booking.
      */
     @GetMapping("/booking/{bookingId}/my-review")
-    public ResponseEntity<ApiResponse<Object>> getMyReviewForBooking(@PathVariable Long bookingId) {
+    public ResponseEntity<ApiResponse<ReviewResponse>> getMyReviewForBooking(@PathVariable Long bookingId) {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("Fetching review for userId={} and bookingId={}", userId, bookingId);
 
-        return reviewService.getReviewByBookingIdAndUserId(bookingId, userId)
-                .map(review -> ResponseEntity.ok(new ApiResponse<>("Review fetched successfully", review)))
-                .orElseGet(() -> ResponseEntity.ok(new ApiResponse<>("No review found for this booking")));
+        Optional<ReviewResponse> review = reviewService.getReviewByBookingIdAndUserId(bookingId, userId);
+        if (review.isPresent()) {
+            return ResponseEntity.ok(new ApiResponse<>("Review fetched successfully", review.get()));
+        } else {
+            return ResponseEntity.ok(new ApiResponse<>("No review found for this booking", null));
+        }
     }
 }

@@ -1,17 +1,15 @@
 package com.company.MakeMyTrip.review_service.advices;
 
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.springframework.http.HttpStatus;
+import lombok.NoArgsConstructor;
 
-import java.util.List;
 
 @Data
-@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ApiError {
-
-    private HttpStatus status;
     private String message;
-    private List<String> subErrors;
+    private String details;
 }
