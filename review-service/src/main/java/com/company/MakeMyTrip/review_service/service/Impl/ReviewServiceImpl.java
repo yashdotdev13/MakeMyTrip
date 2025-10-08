@@ -1,7 +1,8 @@
 package com.company.MakeMyTrip.review_service.service.Impl;
 
-
 import com.company.MakeMyTrip.review_service.auth.UserContextHolder;
+import com.company.MakeMyTrip.review_service.client.BookingClient;
+import com.company.MakeMyTrip.review_service.dtos.BookingResponse;
 import com.company.MakeMyTrip.review_service.dtos.ReviewRequest;
 import com.company.MakeMyTrip.review_service.dtos.ReviewResponse;
 import com.company.MakeMyTrip.review_service.dtos.ReviewSummaryResponse;
@@ -26,45 +27,60 @@ public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final ModelMapper modelMapper;
+    private final BookingClient bookingClient;
 
     @Override
     public ReviewResponse createReview(ReviewRequest request) {
         Long userId = UserContextHolder.getCurrentUserId();
-       log.info("Creating a new review for bookingId={}, userId={}", request.getBookingId(), userId);
+        log.info("User {} is creating a new review for bookingId={}", userId, request.getBookingId());
 
-       Review review = modelMapper.map(request, Review.class);
-       review.setUserId(userId);
-       review.setCreatedAt(LocalDateTime.now());
-       review.setUpdatedAt(LocalDateTime.now());
 
-       Review savedReview = reviewRepository.save(review);
-       log.info("Review created successfully with id={} by userId={}", savedReview.getId(), userId);
+        try {
+            BookingResponse booking = bookingClient.getBookingById(request.getBookingId());
+            if (!booking.getUserId().equals(userId)) {
+                log.error("User {} is not allowed to review bookingId={}", userId, request.getBookingId());
+                throw new SecurityException("You are not allowed to review this booking");
+            }
+        } catch (Exception e) {
+            log.error("Booking validation failed for bookingId={} : {}", request.getBookingId(), e.getMessage());
+            throw new ResourceClosedException("Booking not found or inaccessible: " + request.getBookingId());
+        }
 
-       return modelMapper.map(savedReview, ReviewResponse.class);
+        Review review = new Review();
+        review.setBookingId(request.getBookingId());
+        review.setUserId(userId);
+        review.setRating(request.getRating());
+        review.setComment(request.getComment());
+        review.setCreatedAt(LocalDateTime.now());
+        review.setUpdatedAt(LocalDateTime.now());
+
+        Review savedReview = reviewRepository.save(review);
+        log.info("Review created successfully with id={} by userId={}", savedReview.getId(), userId);
+
+        return modelMapper.map(savedReview, ReviewResponse.class);
     }
 
     @Override
     public ReviewResponse updateReview(Long reviewId, ReviewRequest request) {
-       Long userId = UserContextHolder.getCurrentUserId();
-       log.info("user {} attempting to update review with id={}", userId, reviewId);
+        Long userId = UserContextHolder.getCurrentUserId();
+        log.info("User {} attempting to update reviewId={}", userId, reviewId);
 
-       Review existingReview = reviewRepository.findById(reviewId)
-               .orElseThrow(()->new ResourceClosedException("Review not found with id" +reviewId));
+        Review existingReview = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceClosedException("Review not found with id " + reviewId));
 
-       if(!existingReview.getUserId().equals(userId)){
-           log.error("Unauthorized attempt: userId={} does not own reviewId={}",userId, reviewId);
+        if (!existingReview.getUserId().equals(userId)) {
+            log.error("Unauthorized attempt: userId={} does not own reviewId={}", userId, reviewId);
+            throw new SecurityException("You are not authorized to update this review");
+        }
 
-           throw new SecurityException("You are not authorized to update this  review");
-       }
+        existingReview.setRating(request.getRating());
+        existingReview.setComment(request.getComment());
+        existingReview.setUpdatedAt(LocalDateTime.now());
 
-       existingReview.setRating(request.getRating());
-       existingReview.setComment(request.getComment());
-       existingReview.setUpdatedAt(LocalDateTime.now());
+        Review updatedReview = reviewRepository.save(existingReview);
+        log.info("Review updated successfully for reviewId={} by userId={}", reviewId, userId);
 
-       Review updatedReview= reviewRepository.save(existingReview);
-       log.info("Review updated successfully for reviewId={} by userId={}",reviewId, userId);
-
-       return modelMapper.map(updatedReview, ReviewResponse.class);
+        return modelMapper.map(updatedReview, ReviewResponse.class);
     }
 
     @Override
@@ -73,32 +89,32 @@ public class ReviewServiceImpl implements ReviewService {
 
         return reviewRepository.findByBookingId(bookingId)
                 .stream()
-                .map(review->modelMapper.map(review, ReviewResponse.class))
+                .map(review -> modelMapper.map(review, ReviewResponse.class))
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<ReviewResponse> getReviewByBookingIdAndUserId(Long bookingId, Long userId) {
-        log.info("Fetching review for bookingId={} and  userId={}",bookingId,userId);
+        log.info("Fetching review for bookingId={} and userId={}", bookingId, userId);
 
         return reviewRepository.findByBookingIdAndUserId(bookingId, userId)
-                .map(review->modelMapper.map(review, ReviewResponse.class));
+                .map(review -> modelMapper.map(review, ReviewResponse.class));
     }
 
     @Override
     public ReviewSummaryResponse getReviewSummaryByBookingId(Long bookingId) {
-       log.info("Fetching review summary for bookingId={}",bookingId);
+        log.info("Fetching review summary for bookingId={}", bookingId);
 
-       List<Review> reviews = reviewRepository.findByBookingId(bookingId);
-       if(reviews.isEmpty()){
-           log.warn("No reviews found for booking={}",bookingId);
-           return new ReviewSummaryResponse(bookingId, (double) 0, 0.0);
-       }
+        List<Review> reviews = reviewRepository.findByBookingId(bookingId);
+        if (reviews.isEmpty()) {
+            log.warn("No reviews found for bookingId={}", bookingId);
+            return new ReviewSummaryResponse(bookingId, 0.0, 0.0);
+        }
 
-       double avgRating = reviews.stream()
-               .mapToInt(Review::getRating)
-               .average()
-               .orElse(0.0);
+        double avgRating = reviews.stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0);
 
         ReviewSummaryResponse summary = new ReviewSummaryResponse(
                 bookingId,
@@ -106,8 +122,9 @@ public class ReviewServiceImpl implements ReviewService {
                 Math.round(avgRating * 10.0) / 10.0
         );
 
-        log.info("Review summary for bookingId={} -> totalReview={}, avgRating={}",
+        log.info("Review summary for bookingId={} -> totalReviews={}, avgRating={}",
                 bookingId, summary.getTotalReviews(), summary.getAverageRating());
+
         return summary;
     }
 }
