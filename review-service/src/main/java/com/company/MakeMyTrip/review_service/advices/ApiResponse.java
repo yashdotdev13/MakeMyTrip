@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.review_service.advices;
 
 
+import com.company.MakeMyTrip.review_service.dtos.ReviewResponse;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -12,17 +13,17 @@ public class ApiResponse<T> {
     private T data;
     private ApiError error;
 
-    public ApiResponse(){
+    public ApiResponse(String reviewCreatedSuccessfully, @NotNull ReviewResponse response){
         this.timeStamp = LocalDateTime.now();
     }
 
     public ApiResponse(T data){
-        this();
+        this("Review created successfully", response);
         this.data = data;
     }
 
     public ApiResponse(ApiError error){
-        this();
+        this("Review created successfully", response);
         this.error = error;
     }
 }

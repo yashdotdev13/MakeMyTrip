@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ReviewSummaryResponse {
+public class ReviewSummaryResponse extends ReviewResponse {
 
     private Long bookingId;
     private Double averageRating;
