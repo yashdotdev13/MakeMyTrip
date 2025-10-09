@@ -21,5 +21,7 @@ public interface BookingService {
 
     BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request);
 
+    BookingResponse getBookingByIdInternal(Long bookingId);
+
 
 }

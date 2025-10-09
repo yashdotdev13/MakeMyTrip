@@ -196,4 +196,14 @@ public class BookingServiceImpl implements BookingService {
                 .message("Booking confirmed. Payment initiated.")
                 .build();
     }
+
+    @Override
+    public BookingResponse getBookingByIdInternal(Long bookingId) {
+        log.info("Fetching booking internally with id: {}", bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID " + bookingId));
+
+        return modelMapper.map(booking, BookingResponse.class);
+    }
 }

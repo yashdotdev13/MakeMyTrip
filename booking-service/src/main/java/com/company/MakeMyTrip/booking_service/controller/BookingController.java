@@ -95,9 +95,8 @@ public class BookingController {
     @GetMapping("/internal/{id}")
     public ResponseEntity<BookingResponse> getBookingByIdInternal(@PathVariable("id") Long bookingId) {
         log.info("Internal request to fetch booking with ID: {}", bookingId);
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found with ID " + bookingId));
-        return ResponseEntity.ok(modelMapper.map(booking, BookingResponse.class));
+        BookingResponse response = bookingService.getBookingByIdInternal(bookingId);
+        return ResponseEntity.ok(response);
     }
 
 }
