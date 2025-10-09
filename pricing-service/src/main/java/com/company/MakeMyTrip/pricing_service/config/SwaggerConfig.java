@@ -1,7 +1,7 @@
-package com.company.MakeMyTrip.booking_service.config;
+package com.company.MakeMyTrip.pricing_service.config;
 
-import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,7 +12,7 @@ public class SwaggerConfig {
     public OpenAPI userServiceOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Booking Service API")
+                        .title("Pricing Service API")
                         .description("API documentation for the User microservice")
                         .version("1.0.0"));
     }
