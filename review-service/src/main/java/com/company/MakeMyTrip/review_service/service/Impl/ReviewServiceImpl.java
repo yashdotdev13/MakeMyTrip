@@ -34,9 +34,14 @@ public class ReviewServiceImpl implements ReviewService {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("User {} is creating a new review for bookingId={}", userId, request.getBookingId());
 
-
+        // ✅ Validate booking exists using internal booking endpoint
         try {
             BookingResponse booking = bookingClient.getBookingById(request.getBookingId());
+            if (booking.getUserId() == null) {
+                log.error("Booking userId is null for bookingId={}", request.getBookingId());
+                throw new ResourceClosedException("Booking not found or inaccessible: " + request.getBookingId());
+            }
+
             if (!booking.getUserId().equals(userId)) {
                 log.error("User {} is not allowed to review bookingId={}", userId, request.getBookingId());
                 throw new SecurityException("You are not allowed to review this booking");
@@ -46,6 +51,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new ResourceClosedException("Booking not found or inaccessible: " + request.getBookingId());
         }
 
+        // ✅ Proceed to save review
         Review review = new Review();
         review.setBookingId(request.getBookingId());
         review.setUserId(userId);
@@ -86,7 +92,6 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public List<ReviewResponse> getReviewByBookingId(Long bookingId) {
         log.info("Fetching all reviews for bookingId={}", bookingId);
-
         return reviewRepository.findByBookingId(bookingId)
                 .stream()
                 .map(review -> modelMapper.map(review, ReviewResponse.class))
@@ -96,7 +101,6 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public Optional<ReviewResponse> getReviewByBookingIdAndUserId(Long bookingId, Long userId) {
         log.info("Fetching review for bookingId={} and userId={}", bookingId, userId);
-
         return reviewRepository.findByBookingIdAndUserId(bookingId, userId)
                 .map(review -> modelMapper.map(review, ReviewResponse.class));
     }
@@ -104,8 +108,8 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public ReviewSummaryResponse getReviewSummaryByBookingId(Long bookingId) {
         log.info("Fetching review summary for bookingId={}", bookingId);
-
         List<Review> reviews = reviewRepository.findByBookingId(bookingId);
+
         if (reviews.isEmpty()) {
             log.warn("No reviews found for bookingId={}", bookingId);
             return new ReviewSummaryResponse(bookingId, 0.0, 0.0);
@@ -124,7 +128,6 @@ public class ReviewServiceImpl implements ReviewService {
 
         log.info("Review summary for bookingId={} -> totalReviews={}, avgRating={}",
                 bookingId, summary.getTotalReviews(), summary.getAverageRating());
-
         return summary;
     }
 }
