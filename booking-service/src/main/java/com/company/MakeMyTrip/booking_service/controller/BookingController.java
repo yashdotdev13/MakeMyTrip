@@ -3,9 +3,12 @@ package com.company.MakeMyTrip.booking_service.controller;
 
 import com.company.MakeMyTrip.booking_service.advices.ApiResponse;
 import com.company.MakeMyTrip.booking_service.dtos.*;
+import com.company.MakeMyTrip.booking_service.entity.Booking;
+import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,6 +20,8 @@ import java.util.List;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BookingRepository bookingRepository;
+    private final ModelMapper modelMapper;
 
 
     // create a new booking
@@ -84,4 +89,15 @@ public class BookingController {
         BookingConfirmationResponse response = bookingService.confirmBooking(request);
         return ResponseEntity.ok(response);
     }
+
+
+    // BookingController.java
+    @GetMapping("/internal/{id}")
+    public ResponseEntity<BookingResponse> getBookingByIdInternal(@PathVariable("id") Long bookingId) {
+        log.info("Internal request to fetch booking with ID: {}", bookingId);
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found with ID " + bookingId));
+        return ResponseEntity.ok(modelMapper.map(booking, BookingResponse.class));
+    }
+
 }

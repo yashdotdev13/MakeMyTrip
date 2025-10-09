@@ -11,5 +11,5 @@ public interface BookingClient {
 
 
     @GetMapping("/{bookingId}")
-    BookingResponse getBookingById(@PathVariable Long bookingId);
+    BookingResponse getBookingById(@PathVariable("bookingId") Long bookingId);
 }
