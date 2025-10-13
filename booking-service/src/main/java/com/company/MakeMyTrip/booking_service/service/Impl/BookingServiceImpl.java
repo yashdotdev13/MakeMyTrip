@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.booking_service.service.Impl;
 
 import com.company.MakeMyTrip.booking_service.auth.UserContextHolder;
+import com.company.MakeMyTrip.booking_service.client.NotificationClient;
 import com.company.MakeMyTrip.booking_service.client.PaymentClient;
 import com.company.MakeMyTrip.booking_service.client.PricingClient;
 import com.company.MakeMyTrip.booking_service.dtos.*;
@@ -26,7 +27,8 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final ModelMapper modelMapper;
     private final PricingClient pricingClient;
-    private final PaymentClient paymentClient; // ✅ Added Payment Client
+    private final PaymentClient paymentClient;
+    private final NotificationClient notificationClient; // ✅ Added Feign client for Notification Service
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
@@ -189,11 +191,31 @@ public class BookingServiceImpl implements BookingService {
             log.error("Payment initiation failed for bookingId={}: {}", booking.getId(), e.getMessage());
         }
 
+        // ✅ 9️⃣ Send Booking Confirmation Email
+        try {
+            EmailRequest emailRequest = EmailRequest.builder()
+                    .to("useremail@example.com") // 🔁 Replace with actual user email (from user-service in future)
+                    .subject("Booking Confirmation - MakeMyTrip")
+                    .body(String.format(
+                            "Hello!\n\nYour booking #%d to referenceId %d has been successfully confirmed.\nTotal Amount: ₹%.2f\nTravel Date: %s\n\nThank you for booking with MakeMyTrip!",
+                            booking.getId(),
+                            booking.getReferenceId(),
+                            booking.getAmount(),
+                            booking.getTravelDate()
+                    ))
+                    .build();
+
+            notificationClient.sendEmail(emailRequest);
+            log.info("Booking confirmation email sent for bookingId={}", booking.getId());
+        } catch (Exception e) {
+            log.error("Failed to send booking confirmation email for bookingId={}: {}", booking.getId(), e.getMessage());
+        }
+
         return BookingConfirmationResponse.builder()
                 .bookingId(booking.getId())
                 .status(booking.getStatus().name())
                 .finalPrice(currentPrice)
-                .message("Booking confirmed. Payment initiated.")
+                .message("Booking confirmed. Payment initiated. Confirmation email sent.")
                 .build();
     }
 
