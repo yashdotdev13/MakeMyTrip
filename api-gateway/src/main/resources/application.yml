@@ -71,6 +71,14 @@ spring:
             - name: AuthenticationFilter
 
 
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/notification/**
+          filters:
+            - name: AuthenticationFilter
+
+
 
 
 eureka:
