@@ -28,7 +28,7 @@ public class BookingServiceImpl implements BookingService {
     private final ModelMapper modelMapper;
     private final PricingClient pricingClient;
     private final PaymentClient paymentClient;
-    private final NotificationClient notificationClient; // ✅ Added Feign client for Notification Service
+    private final NotificationClient notificationClient;
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
@@ -127,7 +127,6 @@ public class BookingServiceImpl implements BookingService {
                     .build();
         }
 
-        // 3️⃣ Fetch latest price
         PriceQuoteRequest priceRequest = PriceQuoteRequest.builder()
                 .referenceId(booking.getReferenceId())
                 .bookingType(booking.getBookingType().name())
@@ -143,7 +142,7 @@ public class BookingServiceImpl implements BookingService {
 
         Double currentPrice = quote.getAdjustedPrice();
 
-        // 4️⃣ Price validation
+
         if (!currentPrice.equals(request.getQuotedPrice())) {
             booking.setAmount(currentPrice);
             bookingRepository.save(booking);
@@ -156,7 +155,6 @@ public class BookingServiceImpl implements BookingService {
                     .build();
         }
 
-        // 5️⃣ Availability check
         BookingCountResponse countResponse = getBookingCount(booking.getReferenceId(), booking.getTravelDate().toString());
         int maxCapacity = 100;
         if (countResponse.getCurrentBookings() >= maxCapacity) {
@@ -168,17 +166,14 @@ public class BookingServiceImpl implements BookingService {
                     .build();
         }
 
-        // 6️⃣ Lock price
         pricingClient.lockPrice(booking.getReferenceId(), booking.getBookingType().name());
 
-        // 7️⃣ Update booking status
         booking.setStatus(BookingStatus.AWAITING_PAYMENT);
         booking.setAmount(currentPrice);
         bookingRepository.save(booking);
 
         log.info("Booking {} confirmed. Status set to AWAITING_PAYMENT", booking.getId());
 
-        // 8️⃣ Initiate Payment automatically
         try {
             PaymentRequest paymentRequest = PaymentRequest.builder()
                     .bookingId(booking.getId())
@@ -191,10 +186,9 @@ public class BookingServiceImpl implements BookingService {
             log.error("Payment initiation failed for bookingId={}: {}", booking.getId(), e.getMessage());
         }
 
-        // ✅ 9️⃣ Send Booking Confirmation Email
         try {
             EmailRequest emailRequest = EmailRequest.builder()
-                    .to("useremail@example.com") // 🔁 Replace with actual user email (from user-service in future)
+                    .to("useremail@example.com")
                     .subject("Booking Confirmation - MakeMyTrip")
                     .body(String.format(
                             "Hello!\n\nYour booking #%d to referenceId %d has been successfully confirmed.\nTotal Amount: ₹%.2f\nTravel Date: %s\n\nThank you for booking with MakeMyTrip!",
