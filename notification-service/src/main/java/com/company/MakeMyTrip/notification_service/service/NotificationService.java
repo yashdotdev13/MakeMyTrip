@@ -1,4 +1,4 @@
-package com.company.MakeMyTrip.notification_service.dtos.service;
+package com.company.MakeMyTrip.notification_service.service;
 
 
 import com.company.MakeMyTrip.notification_service.dtos.EmailRequest;
