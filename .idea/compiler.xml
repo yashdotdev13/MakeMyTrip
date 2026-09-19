@@ -6,6 +6,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="Auth-service" />
         <module name="discovery-server" />
       </profile>
       <profile name="Annotation profile for userProfile-service" enabled="true">
@@ -20,7 +21,6 @@
         <module name="booking-service" />
         <module name="userProfile-service" />
         <module name="api-gateway" />
-        <module name="Auth-service" />
         <module name="pricing-service" />
         <module name="notification-service" />
       </profile>
