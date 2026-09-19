@@ -1,28 +1,19 @@
 package com.company.MakeMyTrip.Auth_service.entity;
 
+
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 
 @Entity
-@Table(
-        name = "refresh_tokens",
-        indexes = {
-                @Index(
-                        name = "idx_refresh_tokens_token",
-                        columnList = "token"
-                ),
-                @Index(
-                        name = "idx_refresh_tokens_user_id",
-                        columnList = "user_id"
-                )
-        }
-)
-@Getter
-@Setter
-@NoArgsConstructor
+@Table(name = "refresh_tokens")
+@Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
 public class RefreshToken {
 
@@ -30,23 +21,11 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * SHA-256 hash of the actual refresh token.
-     *
-     * Never store the raw refresh token in the database.
-     */
-    @Column(
-            nullable = false,
-            unique = true,
-            length = 64
-    )
+    @Column(nullable = false, unique = true)
     private String token;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-            name = "user_id",
-            nullable = false
-    )
+    @OneToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
 
     @Column(nullable = false)
