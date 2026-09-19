@@ -12,7 +12,7 @@ import com.company.MakeMyTrip.Auth_service.service.AuthService;
 import com.company.MakeMyTrip.Auth_service.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.auth.InvalidCredentialsException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,36 +46,29 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeConflictException("Email is already registered");
         }
-
         User user = User.builder().username(username).email(email).password(passwordEncoder.encode(request.getPassword())).role(Role.USER).build();
         User savedUser = userRepository.save(user);
         log.info("User registered successfully. userId={}", savedUser.getId());
-        return new RegisterResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), "User registered successfully");
+        return new RegisterResponse(savedUser.getId(), savedUser.getUsername(),
+                savedUser.getEmail(), "User registered successfully");
     }
 
     @Override
     @Transactional
-    public AuthResponse login(LoginRequest request) throws InvalidCredentialsException {
+    public AuthResponse login(LoginRequest request) {
 
         String identifier = request.getUsername().trim();
+        User user = userRepository.findByUsernameOrEmail(identifier,
+                identifier.toLowerCase()).orElseThrow(() -> new BadCredentialsException("Invalid username/email or password"));
 
-        User user = userRepository.findByUsernameOrEmail(identifier, identifier.toLowerCase()).orElseThrow(() -> {
-            try {
-                return new InvalidCredentialsException("Invalid username/email or password");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new InvalidCredentialsException("Invalid username/email or password");
+            throw new BadCredentialsException("Invalid username/email or password");
         }
-
         String accessToken = jwtService.generateToken(user);
         String refreshTokenValue = UUID.randomUUID().toString();
-        RefreshToken refreshToken = RefreshToken.builder().token(refreshTokenValue).user(user)
-                .expiryDate(Instant.now()
-                        .plus(REFRESH_TOKEN_EXPIRY_DAYS, ChronoUnit.DAYS)).build();
 
+        RefreshToken refreshToken = RefreshToken.builder().token(refreshTokenValue)
+                .user(user).expiryDate(Instant.now().plus(REFRESH_TOKEN_EXPIRY_DAYS, ChronoUnit.DAYS)).build();
         refreshTokenRepository.save(refreshToken);
         log.info("User authenticated successfully. userId={}", user.getId());
         return new AuthResponse(accessToken, refreshTokenValue);
@@ -83,19 +76,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthResponse refreshToken(String token) throws InvalidCredentialsException {
+    public AuthResponse refreshToken(String token) {
 
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(token).orElseThrow(() -> {
-            try {
-                return new InvalidCredentialsException("Invalid or expired refresh token");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BadCredentialsException("Invalid or expired refresh token"));
         if (refreshToken.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.delete(refreshToken);
-            throw new InvalidCredentialsException("Invalid or expired refresh token");
+            throw new BadCredentialsException("Invalid or expired refresh token");
         }
 
         User user = refreshToken.getUser();

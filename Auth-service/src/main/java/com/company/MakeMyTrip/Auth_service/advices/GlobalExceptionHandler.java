@@ -5,6 +5,8 @@ package com.company.MakeMyTrip.Auth_service.advices;
 import com.company.MakeMyTrip.Auth_service.exceptions.ResourceNotFoundException;
 import com.company.MakeMyTrip.Auth_service.exceptions.RuntimeConflictException;
 
+
+import org.springframework.security.authentication.BadCredentialsException;
 import org.apache.tomcat.websocket.AuthenticationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -79,6 +81,18 @@ public class GlobalExceptionHandler {
                 .message("Input validation failed")
                 .subErrors(errors)
                 .build();
+        return buildErrorResponseEntity(apiError);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<?>> handleBadCredentials(
+            BadCredentialsException exception) {
+
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.UNAUTHORIZED)
+                .message("Invalid username/email or password")
+                .build();
+
         return buildErrorResponseEntity(apiError);
     }
 

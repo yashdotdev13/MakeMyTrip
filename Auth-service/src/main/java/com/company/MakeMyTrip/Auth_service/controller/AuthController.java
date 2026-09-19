@@ -3,6 +3,7 @@ package com.company.MakeMyTrip.Auth_service.controller;
 
 import com.company.MakeMyTrip.Auth_service.dtos.*;
 import com.company.MakeMyTrip.Auth_service.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.auth.InvalidCredentialsException;
@@ -24,8 +25,8 @@ public class AuthController {
 
     // register a new User
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest registerRequest){
-        log.info("Received registration request for email: {}",registerRequest.getEmail());
+    public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest registerRequest) {
+        log.info("Received registration request for email: {}", registerRequest.getEmail());
 
         RegisterResponse response = authService.register(registerRequest);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
@@ -33,24 +34,19 @@ public class AuthController {
 
     // login a user
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) throws InvalidCredentialsException {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         log.info("Received login request for: {}", loginRequest.getUsername());
         AuthResponse authResponse = authService.login(loginRequest);
         return ResponseEntity.ok(authResponse);
     }
 
 
-
     @PostMapping("/refresh-token")
-    public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
+
         log.info("Received refresh token request");
-        try {
-            AuthResponse authResponse = authService.refreshToken(refreshTokenRequest.getRefreshToken());
-            return ResponseEntity.ok(authResponse);
-        } catch (InvalidCredentialsException e) {
-            log.warn("Refresh token invalid or expired: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+        AuthResponse authResponse = authService.refreshToken(refreshTokenRequest.getRefreshToken());
+        return ResponseEntity.ok(authResponse);
     }
 
 
