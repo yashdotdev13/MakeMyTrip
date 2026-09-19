@@ -1,10 +1,11 @@
 package com.company.MakeMyTrip.Auth_service.service.Impl;
 
+
 import com.company.MakeMyTrip.Auth_service.dtos.*;
 import com.company.MakeMyTrip.Auth_service.entity.RefreshToken;
 import com.company.MakeMyTrip.Auth_service.entity.User;
 import com.company.MakeMyTrip.Auth_service.enums.Role;
-import com.company.MakeMyTrip.Auth_service.exceptions.ResourceNotFoundException;
+import com.company.MakeMyTrip.Auth_service.exceptions.RuntimeConflictException;
 import com.company.MakeMyTrip.Auth_service.repository.RefreshTokenRepository;
 import com.company.MakeMyTrip.Auth_service.repository.UserRepository;
 import com.company.MakeMyTrip.Auth_service.service.AuthService;
@@ -12,125 +13,106 @@ import com.company.MakeMyTrip.Auth_service.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.auth.InvalidCredentialsException;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
-
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AuthServiceImpl implements AuthService {
 
+    private static final long REFRESH_TOKEN_EXPIRY_DAYS = 7;
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
-    private final ModelMapper modelMapper;
-
+    private final JwtService jwtService;
 
     @Override
-    public RegisterResponse register(RegisterRequest registerRequest) {
-        log.info("Attempting to register new user with email: {}",registerRequest.getEmail());
+    @Transactional
+    public RegisterResponse register(RegisterRequest request) {
 
-        if(userRepository.existsByEmail(registerRequest.getEmail())){
-            log.warn("Email already in user: {}", registerRequest.getEmail());
-            throw new RuntimeException("Email already in use");
+        String username = request.getUsername().trim();
+        String email = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByUsername(username)) {
+            throw new RuntimeConflictException("Username is already registered");
+        }
+        if (userRepository.existsByEmail(email)) {
+            throw new RuntimeConflictException("Email is already registered");
         }
 
-        if(userRepository.existsByUsername(registerRequest.getUsername())){
-            log.warn("Username already taken: {}", registerRequest.getUsername());
-            throw new RuntimeException("Username already taken");
-        }
-
-        User user = modelMapper.map(registerRequest, User.class);
-        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-
-        if (registerRequest.getRole() == null || registerRequest.getRole().isEmpty()) {
-            user.setRole(Role.USER);
-        } else {
-            user.setRole(Role.valueOf(registerRequest.getRole()));
-        }
-
-
+        User user = User.builder().username(username).email(email).password(passwordEncoder.encode(request.getPassword())).role(Role.USER).build();
         User savedUser = userRepository.save(user);
-        log.info("User registered successfully with id: {}",savedUser.getId());
-
+        log.info("User registered successfully. userId={}", savedUser.getId());
         return new RegisterResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), "User registered successfully");
     }
 
     @Override
-    public AuthResponse login(LoginRequest loginRequest) throws InvalidCredentialsException {
-        log.info("Attempting login for: {}", loginRequest.getUsername());
+    @Transactional
+    public AuthResponse login(LoginRequest request) throws InvalidCredentialsException {
 
-        User user = userRepository.findByUsernameOrEmail(loginRequest.getUsername(),
-                        loginRequest.getUsername())
-                .orElseThrow(() -> {
-                    log.warn("User not found: {}", loginRequest.getUsername());
-                    return new ResourceNotFoundException("User not found");
-                });
+        String identifier = request.getUsername().trim();
 
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            log.warn("Invalid credentials for user: {}", loginRequest.getUsername());
-            throw new InvalidCredentialsException("Invalid credentials");
+        User user = userRepository.findByUsernameOrEmail(identifier, identifier.toLowerCase()).orElseThrow(() -> {
+            try {
+                return new InvalidCredentialsException("Invalid username/email or password");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new InvalidCredentialsException("Invalid username/email or password");
         }
 
-        // Generate JWT
-        String accessToken = jwtService.generateAccessToken(user);
+        String accessToken = jwtService.generateToken(user);
+        String refreshTokenValue = UUID.randomUUID().toString();
+        RefreshToken refreshToken = RefreshToken.builder().token(refreshTokenValue).user(user)
+                .expiryDate(Instant.now()
+                        .plus(REFRESH_TOKEN_EXPIRY_DAYS, ChronoUnit.DAYS)).build();
 
-        // Generate refresh token
-        String refreshToken = createRefreshToken(user);
-
-        log.info("Login successful for user id: {}", user.getId());
-        return new AuthResponse(accessToken, refreshToken);
+        refreshTokenRepository.save(refreshToken);
+        log.info("User authenticated successfully. userId={}", user.getId());
+        return new AuthResponse(accessToken, refreshTokenValue);
     }
 
     @Override
-    public AuthResponse refreshToken(String refreshTokenStr) throws InvalidCredentialsException {
-        log.info("Refreshing JWT for refresh token: {}", refreshTokenStr);
+    @Transactional
+    public AuthResponse refreshToken(String token) throws InvalidCredentialsException {
 
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenStr)
-                .orElseThrow(() -> {
-                    log.warn("Refresh token not found: {}", refreshTokenStr);
-                    return new ResourceNotFoundException("Invalid refresh token");
-                });
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(token).orElseThrow(() -> {
+            try {
+                return new InvalidCredentialsException("Invalid or expired refresh token");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         if (refreshToken.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.delete(refreshToken);
-            log.warn("Refresh token expired for user id: {}", refreshToken.getUser().getId());
-            throw new InvalidCredentialsException("Refresh token expired");
+            throw new InvalidCredentialsException("Invalid or expired refresh token");
         }
 
-        // Generate new JWT access token
-        String newAccessToken = jwtService.generateAccessToken(refreshToken.getUser());
-
-        log.info("JWT refreshed successfully for user id: {}", refreshToken.getUser().getId());
-        return new AuthResponse(newAccessToken, refreshToken.getToken(), "Bearer");
+        User user = refreshToken.getUser();
+        String accessToken = jwtService.generateToken(user);
+        return new AuthResponse(accessToken, token);
     }
 
     @Override
+    @Transactional
     public void logout(LogoutRequest logoutRequest) {
-        User user = userRepository.findByUsername(logoutRequest.getUsername())
-                .orElseThrow(()->new RuntimeException("User not found"));
-
+        String username = logoutRequest.getUsername().trim();
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            log.warn("Logout requested for unknown username");
+            return;
+        }
         refreshTokenRepository.deleteByUser(user);
-    }
-
-
-    private String createRefreshToken(User user) {
-        // Delete old token if exists
-        refreshTokenRepository.deleteByUser(user);
-
-        RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setUser(user);
-        refreshToken.setExpiryDate(Instant.now().plusSeconds(7 * 24 * 3600)); // 7 days
-        refreshTokenRepository.save(refreshToken);
-
-        log.info("Refresh token created for user id: {}", user.getId());
-        return refreshToken.getToken();
+        log.info("User logged out successfully. userId={}", user.getId());
     }
 }
