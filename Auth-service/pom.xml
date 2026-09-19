@@ -124,7 +124,14 @@
 			<scope>test</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>com.company.MakeMyTrip</groupId>
+			<artifactId>common</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
+
+
 
 	<!-- Spring Cloud BOM -->
 	<dependencyManagement>
