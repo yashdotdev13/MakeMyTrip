@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.Auth_service.service.Impl;
 
-
 import com.company.MakeMyTrip.Auth_service.dtos.*;
 import com.company.MakeMyTrip.Auth_service.entity.RefreshToken;
 import com.company.MakeMyTrip.Auth_service.entity.User;
@@ -9,9 +8,13 @@ import com.company.MakeMyTrip.Auth_service.exceptions.ResourceNotFoundException;
 import com.company.MakeMyTrip.Auth_service.exceptions.RuntimeConflictException;
 import com.company.MakeMyTrip.Auth_service.repository.RefreshTokenRepository;
 import com.company.MakeMyTrip.Auth_service.repository.UserRepository;
+import com.company.MakeMyTrip.Auth_service.service.AuthEventPublisher;
 import com.company.MakeMyTrip.Auth_service.service.AuthService;
 import com.company.MakeMyTrip.Auth_service.service.JwtService;
 import com.company.MakeMyTrip.Auth_service.utils.TokenHashUtils;
+import com.company.MakeMyTrip.common.events.UserLoggedInEvent;
+import com.company.MakeMyTrip.common.events.UserLoggedOutEvent;
+import com.company.MakeMyTrip.common.events.UserRegisteredEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -34,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AuthEventPublisher authEventPublisher;
 
     @Override
     @Transactional
@@ -45,12 +49,20 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeConflictException("Username is already registered");
         }
+
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeConflictException("Email is already registered");
         }
-        User user = User.builder().username(username).email(email).password(passwordEncoder.encode(request.getPassword())).role(Role.USER).build();
+
+        User user = User.builder().username(username).email(email)
+                .password(passwordEncoder.encode(request.getPassword())).role(Role.USER).build();
+
         User savedUser = userRepository.save(user);
+
         log.info("User registered successfully. userId={}", savedUser.getId());
+
+        authEventPublisher.publishUserRegistered(new UserRegisteredEvent(savedUser.getId()
+                , savedUser.getUsername(), savedUser.getEmail(), savedUser.getRole().name(), Instant.now()));
         return new RegisterResponse(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail(), "User registered successfully");
     }
 
@@ -65,14 +77,21 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid username/email or password");
         }
-        String accessToken = jwtService.generateToken(user);
-        String refreshTokenValue = UUID.randomUUID().toString();
 
-        RefreshToken refreshToken = RefreshToken.builder().token(refreshTokenValue).user(user)
+        String accessToken = jwtService.generateToken(user);
+
+        String rawRefreshToken = UUID.randomUUID().toString();
+        String hashedRefreshToken = TokenHashUtils.sha256(rawRefreshToken);
+
+        RefreshToken refreshToken = RefreshToken.builder().token(hashedRefreshToken).user(user)
                 .expiryDate(Instant.now().plus(REFRESH_TOKEN_EXPIRY_DAYS, ChronoUnit.DAYS)).build();
+
         refreshTokenRepository.save(refreshToken);
         log.info("User authenticated successfully. userId={}", user.getId());
-        return new AuthResponse(accessToken, refreshTokenValue);
+        authEventPublisher.publishUserLoggedIn(new UserLoggedInEvent(user.getId(), user.getUsername(),
+                user.getEmail(), user.getRole().name(), Instant.now()));
+
+        return new AuthResponse(accessToken, rawRefreshToken);
     }
 
     @Override
@@ -80,24 +99,24 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(String rawToken) {
 
         String hashedToken = TokenHashUtils.sha256(rawToken);
-
-        RefreshToken existingToken = refreshTokenRepository.findByToken(hashedToken)
-                .orElseThrow(() -> new BadCredentialsException("Invalid or expired refresh token"));
+        RefreshToken existingToken = refreshTokenRepository.findByToken(hashedToken).orElseThrow(()
+                -> new BadCredentialsException("Invalid or expired refresh token"));
 
         if (existingToken.getExpiryDate().isBefore(Instant.now())) {
             refreshTokenRepository.delete(existingToken);
             throw new BadCredentialsException("Invalid or expired refresh token");
         }
-
         User user = existingToken.getUser();
 
         refreshTokenRepository.delete(existingToken);
+
         String accessToken = jwtService.generateToken(user);
+
         String newRawRefreshToken = UUID.randomUUID().toString();
         String newHashedRefreshToken = TokenHashUtils.sha256(newRawRefreshToken);
 
-        RefreshToken newRefreshToken = RefreshToken.builder().token(newHashedRefreshToken)
-                .user(user).expiryDate(Instant.now().plus(REFRESH_TOKEN_EXPIRY_DAYS, ChronoUnit.DAYS)).build();
+        RefreshToken newRefreshToken = RefreshToken.builder().token(newHashedRefreshToken).user(user)
+                .expiryDate(Instant.now().plus(REFRESH_TOKEN_EXPIRY_DAYS, ChronoUnit.DAYS)).build();
 
         refreshTokenRepository.save(newRefreshToken);
         log.info("Refresh token rotated successfully. userId={}", user.getId());
@@ -108,19 +127,9 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void logout(Long userId) {
 
-        User user = userRepository
-                .findById(userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "User not found"
-                        )
-                );
-
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         refreshTokenRepository.deleteByUser(user);
-
-        log.info(
-                "User logged out successfully. userId={}",
-                userId
-        );
+        log.info("User logged out successfully. userId={}", userId);
+        authEventPublisher.publishUserLoggedOut(new UserLoggedOutEvent(userId, Instant.now()));
     }
 }

@@ -1,0 +1,4 @@
+com\company\MakeMyTrip\common\events\UserLoggedOutEvent.class
+com\company\MakeMyTrip\common\events\KafkaTopics.class
+com\company\MakeMyTrip\common\events\UserRegisteredEvent.class
+com\company\MakeMyTrip\common\events\UserLoggedInEvent.class
