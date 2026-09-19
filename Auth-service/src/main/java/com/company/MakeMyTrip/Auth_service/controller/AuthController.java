@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.auth.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,8 +52,15 @@ public class AuthController {
 
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(@RequestBody LogoutRequest request) {
-        authService.logout(request);
-        return ResponseEntity.ok("User logged out successfully, refresh token deleted!");
+    public ResponseEntity<Void> logout(
+            Authentication authentication) {
+
+        Long userId = Long.valueOf(
+                authentication.getName()
+        );
+
+        authService.logout(userId);
+
+        return ResponseEntity.noContent().build();
     }
 }

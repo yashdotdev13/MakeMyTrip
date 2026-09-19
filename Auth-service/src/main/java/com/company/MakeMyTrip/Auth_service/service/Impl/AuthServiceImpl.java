@@ -5,6 +5,7 @@ import com.company.MakeMyTrip.Auth_service.dtos.*;
 import com.company.MakeMyTrip.Auth_service.entity.RefreshToken;
 import com.company.MakeMyTrip.Auth_service.entity.User;
 import com.company.MakeMyTrip.Auth_service.enums.Role;
+import com.company.MakeMyTrip.Auth_service.exceptions.ResourceNotFoundException;
 import com.company.MakeMyTrip.Auth_service.exceptions.RuntimeConflictException;
 import com.company.MakeMyTrip.Auth_service.repository.RefreshTokenRepository;
 import com.company.MakeMyTrip.Auth_service.repository.UserRepository;
@@ -105,14 +106,21 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void logout(LogoutRequest logoutRequest) {
-        String username = logoutRequest.getUsername().trim();
-        User user = userRepository.findByUsername(username).orElse(null);
-        if (user == null) {
-            log.warn("Logout requested for unknown username");
-            return;
-        }
+    public void logout(Long userId) {
+
+        User user = userRepository
+                .findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found"
+                        )
+                );
+
         refreshTokenRepository.deleteByUser(user);
-        log.info("User logged out successfully. userId={}", user.getId());
+
+        log.info(
+                "User logged out successfully. userId={}",
+                userId
+        );
     }
 }

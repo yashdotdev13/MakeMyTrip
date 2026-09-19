@@ -46,11 +46,16 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Authentication endpoints
-                        .requestMatchers("/auth/**")
+                        .requestMatchers(
+                                "/auth/register",
+                                "/auth/login",
+                                "/auth/refresh-token"
+                        )
                         .permitAll()
 
-                        // OpenAPI / Swagger
+                        .requestMatchers("/auth/logout")
+                        .authenticated()
+
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -58,14 +63,12 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
-                        // Health endpoints
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/info"
                         )
                         .permitAll()
 
-                        // Everything else requires authentication
                         .anyRequest()
                         .authenticated()
                 )
