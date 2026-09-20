@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.api_gateway;
 
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -10,7 +9,6 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 
-
 @Service
 public class JwtService {
 
@@ -18,19 +16,23 @@ public class JwtService {
     private String jwtSecretKey;
 
     private SecretKey getSecretKey() {
-        return Keys.hmacShaKeyFor(jwtSecretKey.getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(
+                jwtSecretKey.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     public String getUserIdFromToken(String token) {
+
         Claims claims = Jwts.parser()
-                .setSigningKey(getSecretKey())
+                .verifyWith(getSecretKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
 
         Object userIdObj = claims.get("userId");
+
         if (userIdObj == null) {
-            throw new RuntimeException("Missing userId claim in JWT");
+            throw new IllegalArgumentException("Missing userId claim in JWT");
         }
 
         return userIdObj.toString();
