@@ -16,9 +16,22 @@ public class JwtService {
     private String jwtSecretKey;
 
     private SecretKey getSecretKey() {
-        return Keys.hmacShaKeyFor(
-                jwtSecretKey.getBytes(StandardCharsets.UTF_8)
-        );
+
+        if (jwtSecretKey == null || jwtSecretKey.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT secret key must not be empty"
+            );
+        }
+
+        byte[] keyBytes = jwtSecretKey.getBytes(StandardCharsets.UTF_8);
+
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "JWT secret key must be at least 256 bits (32 bytes)"
+            );
+        }
+
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String getUserIdFromToken(String token) {
@@ -32,7 +45,9 @@ public class JwtService {
         Object userIdObj = claims.get("userId");
 
         if (userIdObj == null) {
-            throw new IllegalArgumentException("Missing userId claim in JWT");
+            throw new IllegalArgumentException(
+                    "Missing userId claim in JWT"
+            );
         }
 
         return userIdObj.toString();

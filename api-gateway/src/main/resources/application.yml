@@ -2,44 +2,73 @@ jwt:
   secretKey: mysupersecurekeyformysafarsaathijwt1234567890abcdefABCDEF1234567890
 
 
+gateway:
+  security:
+    public-paths:
+      - /auth/login
+      - /auth/register
 
 server:
   port: 8081
+  shutdown: graceful
 
 spring:
   application:
     name: api-gateway
 
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
   cloud:
     gateway:
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+
+      httpClient:
+        connect-timeout: 3000
+        response-timeout: 10s
+
       globalcors:
-        corsConfigurations:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
           '[/**]':
-            allowedOrigins: "*"
+            allowedOrigins:
+              - "${CORS_ALLOWED_ORIGIN:http://localhost:3000}"
             allowedMethods:
               - GET
               - POST
               - PUT
               - DELETE
+              - PATCH
               - OPTIONS
+            allowedHeaders:
+              - Authorization
+              - Content-Type
+              - X-Correlation-Id
+              - X-User-Id
+            exposedHeaders:
+              - X-Correlation-Id
+            allowCredentials: true
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+        - AddResponseHeader=X-Content-Type-Options, nosniff
+        - AddResponseHeader=X-Frame-Options, DENY
+        - AddResponseHeader=Referrer-Policy, no-referrer
+
       routes:
+
         - id: auth-service
-          uri: lb://auth-service
+          uri: lb://Auth-service
           predicates:
             - Path=/auth/**
           filters:
             - name: AuthenticationFilter
 
-
-        - id: userProfile-service
-          uri: lb://userProfile-service
+        - id: user-profile-service
+          uri: lb://user-profile-service
           predicates:
             - Path=/profiles/**
           filters:
             - name: AuthenticationFilter
-
 
         - id: booking-service
           uri: lb://booking-service
@@ -51,10 +80,9 @@ spring:
         - id: pricing-service
           uri: lb://pricing-service
           predicates:
-           - Path=/pricing/**
+            - Path=/pricing/**
           filters:
-           - name: AuthenticationFilter
-
+            - name: AuthenticationFilter
 
         - id: payment-service
           uri: lb://payment-service
@@ -70,7 +98,6 @@ spring:
           filters:
             - name: AuthenticationFilter
 
-
         - id: notification-service
           uri: lb://notification-service
           predicates:
@@ -78,7 +105,23 @@ spring:
           filters:
             - name: AuthenticationFilter
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - metrics
+          - prometheus
 
+  endpoint:
+    health:
+      show-details: when_authorized
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 
 eureka:
@@ -92,4 +135,6 @@ eureka:
 
 logging:
   level:
-    org.springframework.cloud.gateway: DEBUG
+    root: INFO
+    com.company.MakeMyTrip.api_gateway: INFO
+    org.springframework.cloud.gateway: INFO

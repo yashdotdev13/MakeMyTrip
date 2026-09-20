@@ -1,6 +1,7 @@
 package com.company.MakeMyTrip.api_gateway.filters;
 
 import com.company.MakeMyTrip.api_gateway.JwtService;
+import com.company.MakeMyTrip.api_gateway.config.GatewaySecurityProperties;
 import com.company.MakeMyTrip.api_gateway.exceptions.GatewayErrorWriter;
 import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
@@ -21,14 +22,17 @@ public class AuthenticationFilter
 
     private final JwtService jwtService;
     private final GatewayErrorWriter gatewayErrorWriter;
+    private final GatewaySecurityProperties securityProperties;
 
     public AuthenticationFilter(
             JwtService jwtService,
-            GatewayErrorWriter gatewayErrorWriter) {
+            GatewayErrorWriter gatewayErrorWriter,
+            GatewaySecurityProperties securityProperties) {
 
         super(Config.class);
         this.jwtService = jwtService;
         this.gatewayErrorWriter = gatewayErrorWriter;
+        this.securityProperties = securityProperties;
     }
 
     @Override
@@ -40,8 +44,7 @@ public class AuthenticationFilter
                     .getURI()
                     .getPath();
 
-            if (path.equals("/auth/login")
-                    || path.equals("/auth/register")) {
+            if (securityProperties.getPublicPaths().contains(path)) {
 
                 log.debug(
                         "Public endpoint, skipping authentication: {}",
@@ -90,7 +93,8 @@ public class AuthenticationFilter
 
             try {
 
-                String userId = jwtService.getUserIdFromToken(token);
+                String userId =
+                        jwtService.getUserIdFromToken(token);
 
                 ServerWebExchange modifiedExchange = exchange
                         .mutate()
