@@ -10,4 +10,6 @@ public interface UserProfileService {
     UserProfileResponse createOrUpdateProfile(UserProfileRequest request);
 
     UserProfileResponse getProfile();
+
+
 }
