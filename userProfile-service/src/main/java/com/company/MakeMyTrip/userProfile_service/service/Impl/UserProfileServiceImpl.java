@@ -8,7 +8,6 @@ import com.company.MakeMyTrip.userProfile_service.repository.UserProfileReposito
 import com.company.MakeMyTrip.userProfile_service.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 
@@ -18,20 +17,21 @@ import org.springframework.stereotype.Service;
 public class UserProfileServiceImpl implements UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
-    private final ModelMapper modelMapper;
 
 
     @Override
     public UserProfileResponse createOrUpdateProfile(UserProfileRequest request) {
-        Long userId = UserContextHolder.getCurrentUserId();
-        if (userId == null) {
-            throw new RuntimeException("User ID not found in context");
-        }
 
-        log.info("Creating/updating profile for userId: {}", userId);
+
+        Long userId = UserContextHolder.getCurrentUserId();
+
+        if(userId == null){
+            throw new IllegalStateException("User ID not found in request context");
+        }
+        log.debug("Creating or updating profile for userId={}",userId);
 
         UserProfile profile = userProfileRepository.findByUserId(userId)
-                .orElse(new UserProfile());
+                .orElseGet(UserProfile:: new);
 
         profile.setUserId(userId);
         profile.setFullName(request.getFullName());
@@ -39,25 +39,38 @@ public class UserProfileServiceImpl implements UserProfileService {
         profile.setAddress(request.getAddress());
         profile.setPreferences(request.getPreferences());
 
-        UserProfile saved = userProfileRepository.save(profile);
-        log.info("Profile saved for userId: {}", userId);
-        return modelMapper.map(saved, UserProfileResponse.class);
+        UserProfile savedProfile = userProfileRepository.save(profile);
+        log.info("User profile saved successfully for userId={}",userId);
+
+        return toResponse(savedProfile);
     }
-
-
 
     @Override
     public UserProfileResponse getProfile() {
-        Long userId = UserContextHolder.getCurrentUserId();
-        if (userId == null) {
-            throw new RuntimeException("User ID not found in context");
-        }
 
-        log.info("Fetching profile for userId: {}", userId);
+        Long userId = UserContextHolder.getCurrentUserId();
+
+        if(userId== null){
+            throw new IllegalStateException("User ID not found in request context");
+        }
+        log.debug("Fetching profile for userId={}",userId);
 
         UserProfile profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found for userId: " + userId));
+                .orElseThrow(()->
+                        new IllegalStateException("Profile not found for userId="+userId));
 
-        return modelMapper.map(profile, UserProfileResponse.class);
+        return toResponse(profile);
+    }
+
+    private UserProfileResponse toResponse(UserProfile profile){
+
+        return new UserProfileResponse(
+                profile.getId(),
+                profile.getUserId(),
+                profile.getFullName(),
+                profile.getPhone(),
+                profile.getAddress(),
+                profile.getPreferences()
+        );
     }
 }
