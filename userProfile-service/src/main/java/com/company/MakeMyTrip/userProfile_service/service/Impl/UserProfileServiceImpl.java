@@ -4,6 +4,8 @@ import com.company.MakeMyTrip.userProfile_service.auth.UserContextHolder;
 import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileRequest;
 import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileResponse;
 import com.company.MakeMyTrip.userProfile_service.entity.UserProfile;
+import com.company.MakeMyTrip.userProfile_service.exceptions.InvalidUserContextException;
+import com.company.MakeMyTrip.userProfile_service.exceptions.ProfileNotFoundException;
 import com.company.MakeMyTrip.userProfile_service.repository.UserProfileRepository;
 import com.company.MakeMyTrip.userProfile_service.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +28,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         Long userId = UserContextHolder.getCurrentUserId();
 
         if(userId == null){
-            throw new IllegalStateException("User ID not found in request context");
+            throw new InvalidUserContextException("User ID not found in request context");
         }
         log.debug("Creating or updating profile for userId={}",userId);
 
@@ -51,13 +53,13 @@ public class UserProfileServiceImpl implements UserProfileService {
         Long userId = UserContextHolder.getCurrentUserId();
 
         if(userId== null){
-            throw new IllegalStateException("User ID not found in request context");
+            throw new InvalidUserContextException("User ID not found in request context");
         }
         log.debug("Fetching profile for userId={}",userId);
 
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(()->
-                        new IllegalStateException("Profile not found for userId="+userId));
+                        new ProfileNotFoundException("Profile not found for userId="+userId));
 
         return toResponse(profile);
     }

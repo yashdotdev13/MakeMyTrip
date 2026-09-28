@@ -4,6 +4,7 @@ package com.company.MakeMyTrip.userProfile_service.conttoller;
 import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileRequest;
 import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileResponse;
 import com.company.MakeMyTrip.userProfile_service.service.UserProfileService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,8 @@ public class UserProfileController {
     private  final UserProfileService profileService;
 
     @PostMapping
-    public ResponseEntity<UserProfileResponse> createOrUpdateProfile(@RequestBody UserProfileRequest request) {
+    public ResponseEntity<UserProfileResponse> createOrUpdateProfile(
+            @Valid @RequestBody UserProfileRequest request) {
         return ResponseEntity.ok(profileService.createOrUpdateProfile(request));
     }
 

@@ -2,6 +2,8 @@ package com.company.MakeMyTrip.userProfile_service.advices;
 
 
 
+import com.company.MakeMyTrip.userProfile_service.exceptions.InvalidUserContextException;
+import com.company.MakeMyTrip.userProfile_service.exceptions.ProfileNotFoundException;
 import com.company.MakeMyTrip.userProfile_service.exceptions.ResourceNotFoundException;
 import com.company.MakeMyTrip.userProfile_service.exceptions.RuntimeConflictException;
 import org.apache.tomcat.websocket.AuthenticationException;
@@ -78,6 +80,31 @@ public class GlobalExceptionHandler {
                 .message("Input validation failed")
                 .subErrors(errors)
                 .build();
+        return buildErrorResponseEntity(apiError);
+    }
+
+
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleProfileNotFound(
+            ProfileNotFoundException exception) {
+
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.NOT_FOUND)
+                .message(exception.getMessage())
+                .build();
+
+        return buildErrorResponseEntity(apiError);
+    }
+
+    @ExceptionHandler(InvalidUserContextException.class)
+    public ResponseEntity<ApiResponse<?>> handleInvalidUserContext(
+            InvalidUserContextException exception) {
+
+        ApiError apiError = ApiError.builder()
+                .status(HttpStatus.UNAUTHORIZED)
+                .message(exception.getMessage())
+                .build();
+
         return buildErrorResponseEntity(apiError);
     }
 
