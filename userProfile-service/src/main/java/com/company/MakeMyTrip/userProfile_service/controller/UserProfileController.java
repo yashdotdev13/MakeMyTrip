@@ -1,4 +1,4 @@
-package com.company.MakeMyTrip.userProfile_service.conttoller;
+package com.company.MakeMyTrip.userProfile_service.controller;
 
 
 import com.company.MakeMyTrip.userProfile_service.dtos.UserProfileRequest;
