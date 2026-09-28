@@ -1,88 +1,86 @@
 package com.company.MakeMyTrip.userProfile_service.advices;
 
-
-
-import com.company.MakeMyTrip.userProfile_service.exceptions.ResourceNotFoundException;
-import com.company.MakeMyTrip.userProfile_service.exceptions.RuntimeConflictException;
-import org.apache.tomcat.websocket.AuthenticationException;
+import com.company.MakeMyTrip.userProfile_service.exceptions.InvalidUserContextException;
+import com.company.MakeMyTrip.userProfile_service.exceptions.ProfileNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.nio.file.AccessDeniedException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<?>> handleResourceNotFound(ResourceNotFoundException exception) {
-        ApiError apiError = ApiError.builder()
-                .status(HttpStatus.NOT_FOUND)
-                .message(exception.getMessage())
-                .build();
-        return buildErrorResponseEntity(apiError);
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleProfileNotFound(
+            ProfileNotFoundException exception) {
+
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage()
+        );
     }
 
-    @ExceptionHandler(RuntimeConflictException.class)
-    public ResponseEntity<ApiResponse<?>> handleRuntimeConflictException(RuntimeConflictException exception) {
-        ApiError apiError = ApiError.builder()
-                .status(HttpStatus.CONFLICT)
-                .message(exception.getMessage())
-                .build();
-        return buildErrorResponseEntity(apiError);
-    }
+    @ExceptionHandler(InvalidUserContextException.class)
+    public ResponseEntity<ApiResponse<?>> handleInvalidUserContext(
+            InvalidUserContextException exception) {
 
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ApiResponse<?>> handleAuthenticationException(AuthenticationException ex) {
-        ApiError apiError = ApiError.builder()
-                .status(HttpStatus.UNAUTHORIZED)
-                .message(ex.getMessage())
-                .build();
-        return buildErrorResponseEntity(apiError);
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<?>> handleAccessDeniedException(AccessDeniedException ex) {
-        ApiError apiError = ApiError.builder()
-                .status(HttpStatus.FORBIDDEN)
-                .message(ex.getMessage())
-                .build();
-        return buildErrorResponseEntity(apiError);
-    }
-
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<?>> handleInternalServerError(Exception exception) {
-        ApiError apiError = ApiError.builder()
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .message(exception.getMessage())
-                .build();
-        return buildErrorResponseEntity(apiError);
+        return buildErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                exception.getMessage()
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<?>> handleInputValidationErrors(MethodArgumentNotValidException exception) {
-        List<String> errors = exception
-                .getBindingResult()
-                .getAllErrors()
+    public ResponseEntity<ApiResponse<?>> handleValidationErrors(
+            MethodArgumentNotValidException exception) {
+
+        List<String> errors = exception.getBindingResult()
+                .getFieldErrors()
                 .stream()
-                .map(error -> error.getDefaultMessage())
-                .collect(Collectors.toList());
+                .map(error ->
+                        error.getField() + ": " + error.getDefaultMessage()
+                )
+                .toList();
 
         ApiError apiError = ApiError.builder()
                 .status(HttpStatus.BAD_REQUEST)
                 .message("Input validation failed")
                 .subErrors(errors)
                 .build();
+
         return buildErrorResponseEntity(apiError);
     }
 
-    private ResponseEntity<ApiResponse<?>> buildErrorResponseEntity(ApiError apiError) {
-        return new ResponseEntity<>(new ApiResponse<>(apiError), apiError.getStatus());
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<?>> handleUnexpectedException(
+            Exception exception) {
+
+        return buildErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred"
+        );
     }
 
+    private ResponseEntity<ApiResponse<?>> buildErrorResponse(
+            HttpStatus status,
+            String message) {
+
+        ApiError apiError = ApiError.builder()
+                .status(status)
+                .message(message)
+                .build();
+
+        return buildErrorResponseEntity(apiError);
+    }
+
+    private ResponseEntity<ApiResponse<?>> buildErrorResponseEntity(
+            ApiError apiError) {
+
+        return ResponseEntity
+                .status(apiError.getStatus())
+                .body(new ApiResponse<>(apiError));
+    }
 }

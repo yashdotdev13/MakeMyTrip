@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/MakeMyTrip.iml" filepath="$PROJECT_DIR$/.idea/MakeMyTrip.iml" />
       <module fileurl="file://$PROJECT_DIR$/common/common.iml" filepath="$PROJECT_DIR$/common/common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/userProfile-service/userProfile-service.iml" filepath="$PROJECT_DIR$/userProfile-service/userProfile-service.iml" />
     </modules>
   </component>
 </project>
