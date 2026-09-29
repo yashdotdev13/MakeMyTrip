@@ -33,12 +33,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse createBooking(BookingRequest request) {
 
         Long userId = UserContextHolder.getCurrentUserId();
-
-        log.info(
-                "Creating booking for userId={}",
-                userId
-        );
-
+        log.info("Creating booking for userId={}", userId);
         Booking booking = new Booking();
 
         booking.setUserId(userId);
@@ -49,89 +44,44 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.PENDING);
 
         Booking savedBooking = bookingRepository.save(booking);
-
-        log.info(
-                "Booking created successfully bookingId={} userId={}",
-                savedBooking.getId(),
-                userId
-        );
-
+        log.info("Booking created successfully bookingId={} userId={}", savedBooking.getId(), userId);
         return toResponse(savedBooking);
     }
 
     @Override
     public BookingResponse getBookingById(Long bookingId) {
-
         Long userId = UserContextHolder.getCurrentUserId();
-
-        log.info(
-                "Fetching booking bookingId={} userId={}",
-                bookingId,
-                userId
-        );
-
-        Booking booking = bookingRepository
-                .findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Booking not found with ID " + bookingId
-                        )
-                );
-
+        log.info("Fetching booking bookingId={} userId={}", bookingId, userId);
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId,
+                userId).orElseThrow(() ->
+                new RuntimeException("Booking not found with ID " + bookingId));
         return toResponse(booking);
     }
 
     @Override
     public List<BookingResponse> getBookingByUser() {
-
         Long userId = UserContextHolder.getCurrentUserId();
-
-        log.info(
-                "Fetching all bookings for userId={}",
-                userId
-        );
-
-        return bookingRepository
-                .findAllByUserId(userId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        log.info("Fetching all bookings for userId={}", userId);
+        return bookingRepository.findAllByUserId(userId).stream()
+                .map(this::toResponse).toList();
     }
 
     @Override
-    public BookingResponse updateBooking(
-            Long bookingId,
-            BookingRequest request) {
+    public BookingResponse updateBooking(Long bookingId, BookingRequest request) {
 
         Long userId = UserContextHolder.getCurrentUserId();
-
-        log.info(
-                "Updating booking bookingId={} userId={}",
-                bookingId,
-                userId
-        );
-
-        Booking booking = bookingRepository
-                .findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Booking not found with ID " + bookingId
-                        )
-                );
+        log.info("Updating booking bookingId={} userId={}", bookingId, userId);
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId,
+                userId).orElseThrow(() ->
+                new RuntimeException("Booking not found with ID " + bookingId));
 
         booking.setBookingType(request.getBookingType());
         booking.setReferenceId(request.getReferenceId());
         booking.setTravelDate(request.getTravelDate());
         booking.setAmount(request.getAmount());
 
-        Booking updatedBooking =
-                bookingRepository.save(booking);
-
-        log.info(
-                "Booking updated successfully bookingId={}",
-                bookingId
-        );
-
+        Booking updatedBooking = bookingRepository.save(booking);
+        log.info("Booking updated successfully bookingId={}", bookingId);
         return toResponse(updatedBooking);
     }
 
@@ -140,91 +90,37 @@ public class BookingServiceImpl implements BookingService {
     public void cancelBooking(Long bookingId) {
 
         Long userId = UserContextHolder.getCurrentUserId();
-
-        log.info(
-                "Cancelling booking bookingId={} userId={}",
-                bookingId,
-                userId
-        );
-
-        Booking booking = bookingRepository
-                .findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Booking not found with ID " + bookingId
-                        )
-                );
+        log.info("Cancelling booking bookingId={} userId={}", bookingId, userId);
+        Booking booking = bookingRepository.findByIdAndUserId(bookingId,
+                userId).orElseThrow(()
+                -> new RuntimeException("Booking not found with ID " + bookingId));
 
         bookingRepository.delete(booking);
-
-        log.info(
-                "Booking cancelled successfully bookingId={}",
-                bookingId
-        );
+        log.info("Booking cancelled successfully bookingId={}", bookingId);
     }
 
     @Override
-    public BookingCountResponse getBookingCount(
-            Long referenceId,
-            String travelDate) {
+    public BookingCountResponse getBookingCount(Long referenceId, String travelDate) {
 
-        log.info(
-                "Fetching booking count referenceId={} travelDate={}",
-                referenceId,
-                travelDate
-        );
-
+        log.info("Fetching booking count referenceId={} travelDate={}", referenceId, travelDate);
         LocalDate parsedTravelDate = LocalDate.parse(travelDate);
-
-        int count =
-                bookingRepository.countByReferenceIdAndTravelDate(
-                        referenceId,
-                        parsedTravelDate
-                );
-
-        return BookingCountResponse.builder()
-                .referenceId(referenceId)
-                .travelDate(travelDate)
-                .currentBookings(count)
-                .build();
+        int count = bookingRepository.countByReferenceIdAndTravelDate(referenceId, parsedTravelDate);
+        return BookingCountResponse.builder().referenceId(referenceId).
+                travelDate(travelDate).currentBookings(count).build();
     }
 
     @Override
     @Transactional
-    public BookingConfirmationResponse confirmBooking(
-            BookingConfirmationRequest request) {
+    public BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request) {
 
         Long userId = UserContextHolder.getCurrentUserId();
-
-        log.info(
-                "Confirming booking bookingId={} userId={}",
-                request.getBookingId(),
-                userId
-        );
-
-        Booking booking = bookingRepository
-                .findByIdAndUserId(
-                        request.getBookingId(),
-                        userId
-                )
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Booking not found with ID "
-                                        + request.getBookingId()
-                        )
-                );
+        log.info("Confirming booking bookingId={} userId={}", request.getBookingId(), userId);
+        Booking booking = bookingRepository.findByIdAndUserId(request
+                .getBookingId(), userId).orElseThrow(()
+                -> new RuntimeException("Booking not found with ID " + request.getBookingId()));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
-
-            return BookingConfirmationResponse.builder()
-                    .bookingId(booking.getId())
-                    .status(booking.getStatus().name())
-                    .finalPrice(booking.getAmount())
-                    .message(
-                            "Booking cannot be confirmed. Current status: "
-                                    + booking.getStatus()
-                    )
-                    .build();
+            return BookingConfirmationResponse.builder().bookingId(booking.getId()).status(booking.getStatus().name()).finalPrice(booking.getAmount()).message("Booking cannot be confirmed. Current status: " + booking.getStatus()).build();
         }
 
         /*
@@ -235,74 +131,37 @@ public class BookingServiceImpl implements BookingService {
          * into the AWAITING_PAYMENT state.
          */
 
-        if (request.getQuotedPrice() != null
-                && booking.getAmount() != null
-                && booking.getAmount()
-                .compareTo(request.getQuotedPrice()) != 0) {
+        if (request.getQuotedPrice() != null && booking.getAmount() != null
+                && booking.getAmount().compareTo(request.getQuotedPrice()) != 0) {
 
             booking.setAmount(request.getQuotedPrice());
+            Booking updatedBooking = bookingRepository.save(booking);
+            log.info("Booking price updated bookingId={}", updatedBooking.getId());
 
-            Booking updatedBooking =
-                    bookingRepository.save(booking);
-
-            log.info(
-                    "Booking price updated bookingId={}",
-                    updatedBooking.getId()
-            );
-
-            return BookingConfirmationResponse.builder()
-                    .bookingId(updatedBooking.getId())
-                    .status(updatedBooking.getStatus().name())
+            return BookingConfirmationResponse.builder().bookingId(updatedBooking
+                    .getId()).status(updatedBooking.getStatus().name())
                     .finalPrice(updatedBooking.getAmount())
-                    .message(
-                            "Price has changed. Please review the new price."
-                    )
-                    .build();
+                    .message("Price has changed. Please review the new price.").build();
         }
-
         booking.setStatus(BookingStatus.AWAITING_PAYMENT);
-
-        Booking savedBooking =
-                bookingRepository.save(booking);
-
-        log.info(
-                "Booking moved to AWAITING_PAYMENT bookingId={}",
-                savedBooking.getId()
-        );
-
-        return BookingConfirmationResponse.builder()
-                .bookingId(savedBooking.getId())
+        Booking savedBooking = bookingRepository.save(booking);
+        log.info("Booking moved to AWAITING_PAYMENT bookingId={}", savedBooking.getId());
+        return BookingConfirmationResponse.builder().bookingId(savedBooking.getId())
                 .status(savedBooking.getStatus().name())
                 .finalPrice(savedBooking.getAmount())
-                .message("Booking is awaiting payment.")
-                .build();
+                .message("Booking is awaiting payment.").build();
     }
 
     @Override
-    public BookingResponse getBookingByIdInternal(
-            Long bookingId) {
-
-        log.info(
-                "Fetching booking internally bookingId={}",
-                bookingId
-        );
-
-        Booking booking = bookingRepository
-                .findById(bookingId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Booking not found with ID "
-                                        + bookingId
-                        )
-                );
-
+    public BookingResponse getBookingByIdInternal(Long bookingId) {
+        log.info("Fetching booking internally bookingId={}", bookingId);
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(()
+                -> new RuntimeException("Booking not found with ID " + bookingId));
         return toResponse(booking);
     }
 
     private BookingResponse toResponse(Booking booking) {
-
-        return BookingResponse.builder()
-                .id(booking.getId())
+        return BookingResponse.builder().id(booking.getId())
                 .userId(booking.getUserId())
                 .bookingType(booking.getBookingType())
                 .referenceId(booking.getReferenceId())
