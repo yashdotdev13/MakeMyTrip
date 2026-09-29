@@ -10,6 +10,7 @@
         <module name="discovery-server" />
         <module name="common" />
         <module name="Auth-service" />
+        <module name="booking-service" />
       </profile>
       <profile name="Annotation profile for api-gateway" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -18,10 +19,9 @@
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.34/lombok-1.18.34.jar" />
         </processorPath>
+        <module name="api-gateway" />
         <module name="payment-service" />
         <module name="review-service" />
-        <module name="booking-service" />
-        <module name="api-gateway" />
         <module name="pricing-service" />
         <module name="notification-service" />
       </profile>
