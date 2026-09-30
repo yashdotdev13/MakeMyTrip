@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.booking_service.entity;
 
-
 import com.company.MakeMyTrip.booking_service.enums.BookingStatus;
 import com.company.MakeMyTrip.booking_service.enums.BookingType;
 import jakarta.persistence.*;
@@ -14,10 +13,18 @@ import java.time.LocalDateTime;
 @Table(
         name = "bookings",
         indexes = {
-                @Index(name = "idx_booking_user_id", columnList = "user_id"),
-                @Index(name = "idx_booking_reference_date",
-                        columnList = "reference_id, travel_date"),
-                @Index(name = "idx_booking_status", columnList = "status")
+                @Index(
+                        name = "idx_booking_user_id",
+                        columnList = "user_id"
+                ),
+                @Index(
+                        name = "idx_booking_reference_date",
+                        columnList = "reference_id, travel_date"
+                ),
+                @Index(
+                        name = "idx_booking_status",
+                        columnList = "status"
+                )
         }
 )
 @Getter
@@ -31,26 +38,47 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "booking_type", nullable = false, length = 20)
+    @Column(
+            name = "booking_type",
+            nullable = false,
+            length = 20
+    )
     private BookingType bookingType;
 
     @Column(name = "reference_id", nullable = false)
     private Long referenceId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(
+            nullable = false,
+            length = 30
+    )
     @Builder.Default
     private BookingStatus status = BookingStatus.PENDING;
 
-    @Column(name = "booking_date", nullable = false, updatable = false)
+    @Column(
+            name = "booking_date",
+            nullable = false,
+            updatable = false
+    )
     @Builder.Default
     private LocalDateTime bookingDate = LocalDateTime.now();
 
-    @Column(name = "travel_date", nullable = false)
+    @Column(
+            name = "updated_at",
+            nullable = false
+    )
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @Column(
+            name = "travel_date",
+            nullable = false
+    )
     private LocalDate travelDate;
 
     @Column(
@@ -58,4 +86,11 @@ public class Booking {
             scale = 2
     )
     private BigDecimal amount;
+
+    @Version
+    @Column(
+            nullable = false
+    )
+    @Builder.Default
+    private Long version = 0L;
 }
