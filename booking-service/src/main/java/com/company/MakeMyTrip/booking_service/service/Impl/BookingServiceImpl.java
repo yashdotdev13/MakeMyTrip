@@ -203,6 +203,7 @@ public class BookingServiceImpl implements BookingService {
                     .message("Price has changed. Please review the new price.").build();
         }
 
+
         /*
          * Step 5: Move booking to AWAITING_PAYMENT.
          */
