@@ -12,6 +12,7 @@ import com.company.MakeMyTrip.booking_service.dtos.PriceLockRequest;
 import com.company.MakeMyTrip.booking_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.booking_service.entity.Booking;
 import com.company.MakeMyTrip.booking_service.enums.BookingStatus;
+import com.company.MakeMyTrip.booking_service.exceptions.BookingModificationNotAllowedException;
 import com.company.MakeMyTrip.booking_service.exceptions.BookingNotFoundException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextException;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
@@ -80,6 +81,11 @@ public class BookingServiceImpl implements BookingService {
                 userId).orElseThrow(() ->
                 new BookingNotFoundException("Booking not found with ID " + bookingId));
 
+        if(booking.getStatus() != BookingStatus.PENDING){
+            throw new BookingModificationNotAllowedException(
+                    "Booking cannot be modified from status "+ booking.getStatus()
+            );
+        }
         booking.setBookingType(request.getBookingType());
         booking.setReferenceId(request.getReferenceId());
         booking.setTravelDate(request.getTravelDate());

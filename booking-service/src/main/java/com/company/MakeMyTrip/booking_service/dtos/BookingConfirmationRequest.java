@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.booking_service.dtos;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -22,4 +23,7 @@ public class BookingConfirmationRequest {
     @NotNull(message = "Quoted price is required")
     @Positive(message = "Quoted price must be positive")
     private BigDecimal quotedPrice;
+
+    @NotBlank(message = "Idempotency key is required")
+    private String idempotencyKey;
 }

@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.booking_service.advices;
 
+import com.company.MakeMyTrip.booking_service.exceptions.BookingModificationNotAllowedException;
 import com.company.MakeMyTrip.booking_service.exceptions.BookingNotFoundException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidBookingStateException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextException;
@@ -82,6 +83,16 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "An unexpected error occurred"
+        );
+    }
+
+    @ExceptionHandler(BookingModificationNotAllowedException.class)
+    public ResponseEntity<ApiResponse<?>> handleBookingModificationNotAllowed(
+            BookingModificationNotAllowedException exception) {
+
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
         );
     }
 
