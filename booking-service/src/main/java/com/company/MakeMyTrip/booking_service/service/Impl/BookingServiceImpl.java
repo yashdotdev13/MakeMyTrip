@@ -12,6 +12,7 @@ import com.company.MakeMyTrip.booking_service.dtos.PriceLockRequest;
 import com.company.MakeMyTrip.booking_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.booking_service.entity.Booking;
 import com.company.MakeMyTrip.booking_service.enums.BookingStatus;
+import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextException;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
 import jakarta.transaction.Transactional;
@@ -32,7 +33,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingResponse createBooking(BookingRequest request) {
 
-        Long userId = UserContextHolder.getCurrentUserId();
+        Long userId = getRequiredUserId();
         log.info("Creating booking for userId={}", userId);
         Booking booking = new Booking();
 
@@ -50,7 +51,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingResponse getBookingById(Long bookingId) {
-        Long userId = UserContextHolder.getCurrentUserId();
+        Long userId = getRequiredUserId();
         log.info("Fetching booking bookingId={} userId={}", bookingId, userId);
         Booking booking = bookingRepository.findByIdAndUserId(bookingId,
                 userId).orElseThrow(() ->
@@ -60,7 +61,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingResponse> getBookingByUser() {
-        Long userId = UserContextHolder.getCurrentUserId();
+        Long userId = getRequiredUserId();
         log.info("Fetching all bookings for userId={}", userId);
         return bookingRepository.findAllByUserId(userId).stream()
                 .map(this::toResponse).toList();
@@ -69,7 +70,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingResponse updateBooking(Long bookingId, BookingRequest request) {
 
-        Long userId = UserContextHolder.getCurrentUserId();
+        Long userId = getRequiredUserId();
         log.info("Updating booking bookingId={} userId={}", bookingId, userId);
         Booking booking = bookingRepository.findByIdAndUserId(bookingId,
                 userId).orElseThrow(() ->
@@ -89,7 +90,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public void cancelBooking(Long bookingId) {
 
-        Long userId = UserContextHolder.getCurrentUserId();
+        Long userId = getRequiredUserId();
         log.info("Cancelling booking bookingId={} userId={}", bookingId, userId);
         Booking booking = bookingRepository.findByIdAndUserId(bookingId,
                 userId).orElseThrow(()
@@ -113,7 +114,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request) {
 
-        Long userId = UserContextHolder.getCurrentUserId();
+        Long userId = getRequiredUserId();
         log.info("Confirming booking bookingId={} userId={}", request.getBookingId(), userId);
         Booking booking = bookingRepository.findByIdAndUserId(request
                 .getBookingId(), userId).orElseThrow(()
@@ -158,6 +159,18 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId).orElseThrow(()
                 -> new RuntimeException("Booking not found with ID " + bookingId));
         return toResponse(booking);
+    }
+
+
+    private Long getRequiredUserId() {
+
+        Long userId = UserContextHolder.getCurrentUserId();
+        if (userId == null) {
+            throw new InvalidUserContextException(
+                    "User identity is missing from the request context"
+            );
+        }
+        return userId;
     }
 
     private BookingResponse toResponse(Booking booking) {
