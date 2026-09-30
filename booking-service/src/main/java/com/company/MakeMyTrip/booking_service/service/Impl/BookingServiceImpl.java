@@ -11,11 +11,14 @@ import com.company.MakeMyTrip.booking_service.dtos.PriceQuoteResponse;
 import com.company.MakeMyTrip.booking_service.dtos.PriceLockRequest;
 import com.company.MakeMyTrip.booking_service.dtos.PriceLockResponse;
 import com.company.MakeMyTrip.booking_service.entity.Booking;
+import com.company.MakeMyTrip.booking_service.entity.IdempotencyRecord;
 import com.company.MakeMyTrip.booking_service.enums.BookingStatus;
 import com.company.MakeMyTrip.booking_service.exceptions.BookingModificationNotAllowedException;
 import com.company.MakeMyTrip.booking_service.exceptions.BookingNotFoundException;
+import com.company.MakeMyTrip.booking_service.exceptions.InvalidBookingStateException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextException;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
+import com.company.MakeMyTrip.booking_service.repository.IdempotencyRecordRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
 import com.company.MakeMyTrip.booking_service.service.BookingStateMachine;
 import jakarta.transaction.Transactional;
@@ -34,6 +37,7 @@ public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final BookingStateMachine bookingStateMachine;
+    private final IdempotencyRecordRepository idempotencyRecordRepository;
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
@@ -133,53 +137,97 @@ public class BookingServiceImpl implements BookingService {
     public BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request) {
 
         Long userId = getRequiredUserId();
-        log.info("Confirming booking bookingId={} userId={}", request.getBookingId(), userId);
+
+        log.info("Confirming booking bookingId={} userId={} idempotencyKey={}",
+                request.getBookingId(), userId, request.getIdempotencyKey());
+
+        IdempotencyRecord existingRecord = idempotencyRecordRepository.findByUserIdAndIdempotencyKey(userId, request.getIdempotencyKey())
+                .orElse(null);
+        if (existingRecord != null) {
+            if (!existingRecord.getBookingId().equals(request.getBookingId())) {
+                throw new InvalidBookingStateException("Idempotency key has already been used for another booking");
+            }
+            Booking existingBooking = bookingRepository.findByIdAndUserId(existingRecord
+                    .getBookingId(),
+                    userId).orElseThrow(() -> new BookingNotFoundException("Booking not found with ID "
+                    + existingRecord.getBookingId()));
+
+            log.info("Duplicate confirmation request detected " + "bookingId={} idempotencyKey={}",
+                    existingBooking.getId(), request.getIdempotencyKey());
+            return BookingConfirmationResponse.builder().bookingId(existingBooking.getId())
+                    .status(existingBooking
+                            .getStatus().name())
+                    .finalPrice(existingBooking.getAmount())
+                    .message("Request already processed").build();
+        }
         Booking booking = bookingRepository.findByIdAndUserId(request
                 .getBookingId(), userId).orElseThrow(()
-                -> new RuntimeException("Booking not found with ID " + request.getBookingId()));
+                -> new BookingNotFoundException("Booking not found with ID " + request.getBookingId()));
 
-        if (booking.getStatus() != BookingStatus.PENDING) {
-            return BookingConfirmationResponse
-                    .builder()
-                    .bookingId(booking
-                    .getId())
-                    .status(booking.getStatus().name())
-                    .finalPrice(booking.getAmount())
-                    .message("Booking cannot be confirmed. Current status: " + booking.getStatus()).build();
-        }
         /*
-         * Pricing, inventory, payment and notification
-         * orchestration will be implemented in later phases.
+         * Step 3: Validate the booking state.
          *
-         * For Phase 1, confirmation only moves the booking
-         * into the AWAITING_PAYMENT state.
+         * Confirmation currently means:
+         *
+         * PENDING -> AWAITING_PAYMENT
+         *
+         * The state machine is the single source of truth
+         * for whether this transition is allowed.
          */
+        bookingStateMachine.validateTransition(booking.getStatus(), BookingStatus.AWAITING_PAYMENT);
 
-        if (request.getQuotedPrice() != null && booking.getAmount() != null
-                && booking.getAmount().compareTo(request.getQuotedPrice()) != 0) {
+        /*
+         * Step 4: Check whether the quoted price has changed.
+         *
+         * Pricing, inventory and payment orchestration will
+         * be implemented in later phases.
+         *
+         * For now, if the quoted price differs from the
+         * current booking amount, update the booking amount
+         * and ask the client to review the new price.
+         */
+        if (request.getQuotedPrice() != null && booking.getAmount() != null &&
+                booking.getAmount().compareTo(request.getQuotedPrice()) != 0) {
 
             booking.setAmount(request.getQuotedPrice());
             booking.setUpdatedAt(LocalDateTime.now());
-            Booking updatedBooking = bookingRepository.save(booking);
-            log.info("Booking price updated bookingId={}", updatedBooking.getId());
 
-            return BookingConfirmationResponse.builder().bookingId(updatedBooking
-                    .getId()).status(updatedBooking.getStatus().name())
+            Booking updatedBooking = bookingRepository.save(booking);
+
+            log.info("Booking price updated bookingId={} oldPrice={} newPrice={}",
+                    updatedBooking.getId(), booking.getAmount(), updatedBooking.getAmount());
+
+            return BookingConfirmationResponse.builder().bookingId(updatedBooking.getId())
+                    .status(updatedBooking.getStatus().name())
                     .finalPrice(updatedBooking.getAmount())
                     .message("Price has changed. Please review the new price.").build();
         }
 
-        bookingStateMachine.validateTransition(
-                booking.getStatus(),
-                BookingStatus.AWAITING_PAYMENT
-        );
+        /*
+         * Step 5: Move booking to AWAITING_PAYMENT.
+         */
         booking.setStatus(BookingStatus.AWAITING_PAYMENT);
         booking.setUpdatedAt(LocalDateTime.now());
+
         Booking savedBooking = bookingRepository.save(booking);
-        log.info("Booking moved to AWAITING_PAYMENT bookingId={}", savedBooking.getId());
-        return BookingConfirmationResponse.builder().bookingId(savedBooking.getId())
-                .status(savedBooking.getStatus().name())
-                .finalPrice(savedBooking.getAmount())
+
+        /*
+         * Step 6: Store the idempotency record only after
+         * the booking transition has been successfully persisted.
+         */
+        IdempotencyRecord idempotencyRecord = IdempotencyRecord.builder()
+                .userId(userId).idempotencyKey(request
+                        .getIdempotencyKey())
+                .bookingId(savedBooking.getId()).build();
+
+        idempotencyRecordRepository.save(idempotencyRecord);
+
+        log.info("Booking moved to AWAITING_PAYMENT " + "bookingId={} userId={} idempotencyKey={}",
+                savedBooking.getId(), userId, request.getIdempotencyKey());
+        return BookingConfirmationResponse.builder()
+                .bookingId(savedBooking.getId())
+                .status(savedBooking.getStatus()
+                        .name()).finalPrice(savedBooking.getAmount())
                 .message("Booking is awaiting payment.").build();
     }
 
