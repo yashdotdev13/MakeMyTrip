@@ -1,28 +1,89 @@
 package com.company.MakeMyTrip.booking_service.auth;
 
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-
+@Slf4j
 @Component
 public class UserInterceptor implements HandlerInterceptor {
 
+    private static final String USER_ID_HEADER = "X-User-Id";
+
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler) {
 
-        String userId = request.getHeader("X-User-Id");
+        String userIdHeader =
+                request.getHeader(USER_ID_HEADER);
 
-        if(userId!=null){
-            UserContextHolder.setCurrentUserId(Long.valueOf(userId));
+        if (userIdHeader == null || userIdHeader.isBlank()) {
+
+            log.warn(
+                    "Missing {} header for {} {}",
+                    USER_ID_HEADER,
+                    request.getMethod(),
+                    request.getRequestURI()
+            );
+
+            response.setStatus(
+                    HttpStatus.UNAUTHORIZED.value()
+            );
+
+            return false;
         }
-        return HandlerInterceptor.super.preHandle(request, response, handler);
+
+        try {
+
+            Long userId = Long.parseLong(userIdHeader);
+
+            if (userId <= 0) {
+
+                log.warn(
+                        "Invalid user ID received for {} {}",
+                        request.getMethod(),
+                        request.getRequestURI()
+                );
+
+                response.setStatus(
+                        HttpStatus.UNAUTHORIZED.value()
+                );
+
+                return false;
+            }
+
+            UserContextHolder.setCurrentUserId(userId);
+
+            return true;
+
+        } catch (NumberFormatException exception) {
+
+            log.warn(
+                    "Malformed user ID received for {} {}",
+                    request.getMethod(),
+                    request.getRequestURI()
+            );
+
+            response.setStatus(
+                    HttpStatus.UNAUTHORIZED.value()
+            );
+
+            return false;
+        }
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+    public void afterCompletion(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Object handler,
+            Exception exception) {
+
         UserContextHolder.clear();
     }
 }
