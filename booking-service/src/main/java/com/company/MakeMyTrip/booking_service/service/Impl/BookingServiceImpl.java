@@ -202,11 +202,6 @@ public class BookingServiceImpl implements BookingService {
                     .finalPrice(updatedBooking.getAmount())
                     .message("Price has changed. Please review the new price.").build();
         }
-
-
-        /*
-         * Step 5: Move booking to AWAITING_PAYMENT.
-         */
         booking.setStatus(BookingStatus.AWAITING_PAYMENT);
         booking.setUpdatedAt(LocalDateTime.now());
 
