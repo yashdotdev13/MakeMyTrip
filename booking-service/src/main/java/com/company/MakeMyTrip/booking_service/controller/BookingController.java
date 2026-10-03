@@ -24,103 +24,52 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
-    public ResponseEntity<BookingResponse> createBooking(
-            @Valid @RequestBody BookingRequest request) {
+    public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest request) {
 
         log.info("Received request to create booking");
-
-        BookingResponse response =
-                bookingService.createBooking(request);
-
+        BookingResponse response = bookingService.createBooking(request);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BookingResponse> getBookingById(
-            @PathVariable("id") Long bookingId) {
+    public ResponseEntity<BookingResponse> getBookingById(@PathVariable("id") Long bookingId) {
 
-        log.info(
-                "Received request to fetch booking bookingId={}",
-                bookingId
-        );
-
-        BookingResponse response =
-                bookingService.getBookingById(bookingId);
-
+        log.info("Received request to fetch booking bookingId={}", bookingId);
+        BookingResponse response = bookingService.getBookingById(bookingId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
     public ResponseEntity<List<BookingResponse>> getAllBookingsForUser() {
 
-        log.info(
-                "Received request to fetch bookings for current user"
-        );
-
-        List<BookingResponse> responses =
-                bookingService.getBookingByUser();
-
+        log.info("Received request to fetch bookings for current user");
+        List<BookingResponse> responses = bookingService.getBookingByUser();
         return ResponseEntity.ok(responses);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BookingResponse> updateBooking(
-            @PathVariable("id") Long bookingId,
-            @Valid @RequestBody BookingRequest request) {
+    public ResponseEntity<BookingResponse> updateBooking(@PathVariable("id") Long bookingId,
+                                                         @Valid @RequestBody BookingRequest request) {
 
-        log.info(
-                "Received request to update booking bookingId={}",
-                bookingId
-        );
-
-        BookingResponse response =
-                bookingService.updateBooking(
-                        bookingId,
-                        request
-                );
-
+        log.info("Received request to update booking bookingId={}", bookingId);
+        BookingResponse response = bookingService.updateBooking(bookingId, request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> cancelBooking(
-            @PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> cancelBooking(@PathVariable Long id) {
 
-        log.info(
-                "Received request to cancel booking bookingId={}",
-                id
-        );
-
+        log.info("Received request to cancel booking bookingId={}", id);
         bookingService.cancelBooking(id);
-
-        return ResponseEntity.ok(
-                ApiResponse.<String>builder()
-                        .data(
-                                "Booking with ID "
-                                        + id
-                                        + " cancelled successfully"
-                        )
-                        .build()
-        );
+        return ResponseEntity.ok(ApiResponse.<String>builder().data
+                ("Booking with ID " + id + " cancelled successfully").build());
     }
 
     @GetMapping("/count")
-    public ResponseEntity<BookingCountResponse> getBookingCount(
-            @RequestParam Long referenceId,
-            @RequestParam String travelDate) {
-
-        log.info(
-                "Getting booking count referenceId={} travelDate={}",
-                referenceId,
-                travelDate
-        );
-
-        BookingCountResponse response =
-                bookingService.getBookingCount(
-                        referenceId,
-                        travelDate
-                );
-
+    public ResponseEntity<BookingCountResponse> getBookingCount(@RequestParam Long referenceId,
+                                                                @RequestParam String travelDate) {
+        log.info("Getting booking count referenceId={} travelDate={}", referenceId, travelDate);
+        BookingCountResponse response = bookingService.getBookingCount(referenceId, travelDate);
         return ResponseEntity.ok(response);
     }
 
@@ -128,31 +77,16 @@ public class BookingController {
     public ResponseEntity<BookingConfirmationResponse> confirmBooking(
             @Valid @RequestBody BookingConfirmationRequest request) {
 
-        log.info(
-                "Received request to confirm booking bookingId={}",
-                request.getBookingId()
-        );
-
-        BookingConfirmationResponse response =
-                bookingService.confirmBooking(request);
-
+        log.info("Received request to confirm booking bookingId={}", request.getBookingId());
+        BookingConfirmationResponse response = bookingService.confirmBooking(request);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/internal/{id}")
-    public ResponseEntity<BookingResponse> getBookingByIdInternal(
-            @PathVariable("id") Long bookingId) {
+    public ResponseEntity<BookingResponse> getBookingByIdInternal(@PathVariable("id") Long bookingId) {
 
-        log.info(
-                "Internal request to fetch booking bookingId={}",
-                bookingId
-        );
-
-        BookingResponse response =
-                bookingService.getBookingByIdInternal(
-                        bookingId
-                );
-
+        log.info("Internal request to fetch booking bookingId={}", bookingId);
+        BookingResponse response = bookingService.getBookingByIdInternal(bookingId);
         return ResponseEntity.ok(response);
     }
 }
