@@ -206,11 +206,6 @@ public class BookingServiceImpl implements BookingService {
         booking.setUpdatedAt(LocalDateTime.now());
 
         Booking savedBooking = bookingRepository.save(booking);
-
-        /*
-         * Step 6: Store the idempotency record only after
-         * the booking transition has been successfully persisted.
-         */
         IdempotencyRecord idempotencyRecord = IdempotencyRecord.builder()
                 .userId(userId).idempotencyKey(request
                         .getIdempotencyKey())
