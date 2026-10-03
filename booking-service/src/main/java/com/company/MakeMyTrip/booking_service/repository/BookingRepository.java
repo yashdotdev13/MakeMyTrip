@@ -13,16 +13,9 @@ import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-    // find all bookings for a given user
     List<Booking> findByUserId(Long userId);
-
-    // Optional: Find bookings by type for a user
     List<Booking> findByUserIdAndBookingType(Long userId, BookingType bookingType);
-
-    // Fetch all bookings for a specific user
     List<Booking> findAllByUserId(Long userId);
-
-    // Fetch a single booking by its ID and the user ID to enforce ownership
     Optional<Booking> findByIdAndUserId(Long bookingId, Long userId);
 
 
