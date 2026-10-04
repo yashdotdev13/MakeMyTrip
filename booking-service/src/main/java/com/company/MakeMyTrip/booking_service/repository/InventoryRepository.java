@@ -30,4 +30,41 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
             @Param("inventoryId") Long inventoryId,
             @Param("quantity") int quantity
     );
+
+    @Modifying
+    @Query("""
+    UPDATE Inventory i
+    SET i.reservedQuantity = i.reservedQuantity - :quantity,
+        i.confirmedQuantity = i.confirmedQuantity + :quantity
+    WHERE i.id = :inventoryId
+      AND i.reservedQuantity >= :quantity
+    """)
+    int confirmCapacity(
+            @Param("inventoryId") Long inventoryId,
+            @Param("quantity") int quantity
+    );
+
+    @Modifying
+    @Query("""
+    UPDATE Inventory i
+    SET i.reservedQuantity = i.reservedQuantity - :quantity
+    WHERE i.id = :inventoryId
+      AND i.reservedQuantity >= :quantity
+    """)
+    int releaseReservedCapacity(
+            @Param("inventoryId") Long inventoryId,
+            @Param("quantity") int quantity
+    );
+
+    @Modifying
+    @Query("""
+    UPDATE Inventory i
+    SET i.confirmedQuantity = i.confirmedQuantity - :quantity
+    WHERE i.id = :inventoryId
+      AND i.confirmedQuantity >= :quantity
+    """)
+    int releaseConfirmedCapacity(
+            @Param("inventoryId") Long inventoryId,
+            @Param("quantity") int quantity
+    );
 }
