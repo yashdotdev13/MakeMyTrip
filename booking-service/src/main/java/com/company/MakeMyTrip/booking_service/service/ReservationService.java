@@ -18,4 +18,6 @@ public interface ReservationService {
     Reservation confirmReservation(Long bookingId);
 
     Reservation releaseReservation(Long bookingId);
+
+    int expireDueReservations();
 }

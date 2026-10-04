@@ -12,11 +12,13 @@ import com.company.MakeMyTrip.booking_service.repository.ReservationRepository;
 import com.company.MakeMyTrip.booking_service.service.ReservationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -131,5 +133,42 @@ public class ReservationServiceImpl implements ReservationService {
         lockedReservation.setUpdatedAt(LocalDateTime.now());
 
         return reservationRepository.save(lockedReservation);
+    }
+
+    @Override
+    @Transactional
+    public int expireDueReservations() {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        List<Long> candidateIds =
+                reservationRepository.findExpiredReservationIds(
+                        ReservationStatus.HELD,
+                        now,
+                        PageRequest.of(0, 100)
+                );
+        int expiredCount = 0;
+        for (Long reservationId : candidateIds) {
+            Reservation reservation = reservationRepository.findByIdForUpdate(reservationId).orElse(null);
+
+            if (reservation == null) {
+                continue;
+            }
+            // Recheck after acquiring the row lock.
+            if (reservation.getStatus() != ReservationStatus.HELD || reservation.getExpiresAt().isAfter(now)) {
+                continue;
+            }
+            int updatedRows = inventoryRepository.releaseReservedCapacity(reservation.getInventory().getId(), reservation.getQuantity());
+
+            if (updatedRows == 0) {
+                throw new IllegalStateException("Unable to release inventory for reservation: " + reservationId);
+            }
+            reservation.setStatus(ReservationStatus.EXPIRED);
+            reservation.setUpdatedAt(now);
+
+            reservationRepository.save(reservation);
+            expiredCount++;
+        }
+        return expiredCount;
     }
 }
