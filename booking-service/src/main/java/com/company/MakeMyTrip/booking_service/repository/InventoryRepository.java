@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.booking_service.repository;
 
-
 import com.company.MakeMyTrip.booking_service.entity.Inventory;
 import com.company.MakeMyTrip.booking_service.enums.BookingType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,6 +23,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
         UPDATE Inventory i
         SET i.reservedQuantity = i.reservedQuantity + :quantity
         WHERE i.id = :inventoryId
+          AND :quantity > 0
           AND i.totalCapacity - i.reservedQuantity - i.confirmedQuantity >= :quantity
         """)
     int reserveCapacity(
@@ -33,12 +33,13 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     @Modifying
     @Query("""
-    UPDATE Inventory i
-    SET i.reservedQuantity = i.reservedQuantity - :quantity,
-        i.confirmedQuantity = i.confirmedQuantity + :quantity
-    WHERE i.id = :inventoryId
-      AND i.reservedQuantity >= :quantity
-    """)
+        UPDATE Inventory i
+        SET i.reservedQuantity = i.reservedQuantity - :quantity,
+            i.confirmedQuantity = i.confirmedQuantity + :quantity
+        WHERE i.id = :inventoryId
+          AND :quantity > 0
+          AND i.reservedQuantity >= :quantity
+        """)
     int confirmCapacity(
             @Param("inventoryId") Long inventoryId,
             @Param("quantity") int quantity
@@ -46,11 +47,12 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     @Modifying
     @Query("""
-    UPDATE Inventory i
-    SET i.reservedQuantity = i.reservedQuantity - :quantity
-    WHERE i.id = :inventoryId
-      AND i.reservedQuantity >= :quantity
-    """)
+        UPDATE Inventory i
+        SET i.reservedQuantity = i.reservedQuantity - :quantity
+        WHERE i.id = :inventoryId
+          AND :quantity > 0
+          AND i.reservedQuantity >= :quantity
+        """)
     int releaseReservedCapacity(
             @Param("inventoryId") Long inventoryId,
             @Param("quantity") int quantity
@@ -58,11 +60,12 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
     @Modifying
     @Query("""
-    UPDATE Inventory i
-    SET i.confirmedQuantity = i.confirmedQuantity - :quantity
-    WHERE i.id = :inventoryId
-      AND i.confirmedQuantity >= :quantity
-    """)
+        UPDATE Inventory i
+        SET i.confirmedQuantity = i.confirmedQuantity - :quantity
+        WHERE i.id = :inventoryId
+          AND :quantity > 0
+          AND i.confirmedQuantity >= :quantity
+        """)
     int releaseConfirmedCapacity(
             @Param("inventoryId") Long inventoryId,
             @Param("quantity") int quantity

@@ -7,12 +7,14 @@ import com.company.MakeMyTrip.booking_service.enums.BookingType;
 import com.company.MakeMyTrip.booking_service.enums.ReservationStatus;
 import com.company.MakeMyTrip.booking_service.exceptions.BookingNotFoundException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidBookingStateException;
+import com.company.MakeMyTrip.booking_service.exceptions.ReservationAlreadyExistsException;
 import com.company.MakeMyTrip.booking_service.repository.InventoryRepository;
 import com.company.MakeMyTrip.booking_service.repository.ReservationRepository;
 import com.company.MakeMyTrip.booking_service.service.ReservationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +37,9 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public Reservation reserveInventory(Long bookingId, BookingType bookingType, Long referenceId, LocalDate travelDate, int quantity) {
+    public Reservation reserveInventory(Long bookingId, BookingType bookingType, Long referenceId,
+                                        LocalDate travelDate, int quantity) {
+
         if (bookingId == null || bookingId <= 0) {
             throw new IllegalArgumentException("Invalid booking ID");
         }
@@ -51,22 +55,29 @@ public class ReservationServiceImpl implements ReservationService {
             throw new InvalidBookingStateException("A reservation already exists for this booking");
         }
 
-        Inventory inventory = inventoryRepository.findByBookingTypeAndReferenceIdAndTravelDate(bookingType,
-                referenceId, travelDate)
+        Inventory inventory = inventoryRepository.findByBookingTypeAndReferenceIdAndTravelDate
+                (bookingType, referenceId, travelDate)
                 .orElseThrow(() -> new InvalidBookingStateException("Inventory not found for the requested booking"));
+
         int updatedRows = inventoryRepository.reserveCapacity(inventory.getId(), quantity);
         if (updatedRows == 0) {
             throw new InvalidBookingStateException("Insufficient inventory capacity");
         }
         LocalDateTime now = LocalDateTime.now();
-        Reservation reservation = Reservation.builder().bookingId(bookingId).inventory(inventory)
+        Reservation reservation = Reservation.builder().bookingId(bookingId)
+                .inventory(inventory)
                 .quantity(quantity)
                 .status(ReservationStatus.HELD)
                 .expiresAt(now.plusMinutes(holdDurationMinutes))
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
-        return reservationRepository.save(reservation);
+        try {
+            return reservationRepository.save(reservation);
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("Reservation creation raced for bookingId={}", bookingId);
+            throw new ReservationAlreadyExistsException("A reservation already exists for booking: " + bookingId);
+        }
     }
 
 
@@ -155,18 +166,15 @@ public class ReservationServiceImpl implements ReservationService {
             );
 
         } else {
-
             throw new InvalidBookingStateException(
                     "Reservation cannot be released from its current state"
             );
         }
-
         if (updatedRows == 0) {
             throw new IllegalStateException(
                     "Unable to release inventory capacity"
             );
         }
-
         lockedReservation.setStatus(ReservationStatus.RELEASED);
         lockedReservation.setUpdatedAt(LocalDateTime.now());
 
