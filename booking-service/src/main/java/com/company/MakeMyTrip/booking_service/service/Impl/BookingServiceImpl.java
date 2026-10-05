@@ -14,11 +14,13 @@ import com.company.MakeMyTrip.booking_service.exceptions.BookingModificationNotA
 import com.company.MakeMyTrip.booking_service.exceptions.BookingNotFoundException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidBookingStateException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextException;
+import com.company.MakeMyTrip.booking_service.kafka.BookingDemandEventPublisher;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.repository.IdempotencyRecordRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
 import com.company.MakeMyTrip.booking_service.service.ReservationService;
 
+import com.company.MakeMyTrip.events.BookingDemandEventType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final IdempotencyRecordRepository idempotencyRecordRepository;
     private final ReservationService reservationService;
+    private final BookingDemandEventPublisher bookingDemandEventPublisher;
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
@@ -52,6 +55,15 @@ public class BookingServiceImpl implements BookingService {
         booking.setAmount(request.getAmount());
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        bookingDemandEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getReferenceId(),
+                savedBooking.getBookingType().name(),
+                1,
+                savedBooking.getTravelDate().toString(),
+                BookingDemandEventType.BOOKING_CREATED
+        );
 
         log.info(
                 "Booking created successfully bookingId={} userId={}",
@@ -162,21 +174,20 @@ public class BookingServiceImpl implements BookingService {
                         )
                 );
 
-        /*
-         * Booking entity owns the booking lifecycle transition.
-         */
         booking.cancel();
 
-        /*
-         * Release any inventory reservation associated
-         * with this booking.
-         *
-         * No reservation is also a valid case for
-         * a PENDING booking.
-         */
         reservationService.releaseReservation(booking.getId());
 
-        bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        bookingDemandEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getReferenceId(),
+                savedBooking.getBookingType().name(),
+                1,
+                savedBooking.getTravelDate().toString(),
+                BookingDemandEventType.BOOKING_CANCELLED
+        );
 
         log.info(
                 "Booking cancelled successfully bookingId={}",
