@@ -4,6 +4,7 @@ import com.company.MakeMyTrip.booking_service.entity.Reservation;
 import com.company.MakeMyTrip.booking_service.enums.BookingType;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 public interface ReservationService {
 
@@ -17,7 +18,7 @@ public interface ReservationService {
 
     Reservation confirmReservation(Long bookingId);
 
-    Reservation releaseReservation(Long bookingId);
+    Optional<Reservation> releaseReservation(Long bookingId);
 
     int expireDueReservations();
 }

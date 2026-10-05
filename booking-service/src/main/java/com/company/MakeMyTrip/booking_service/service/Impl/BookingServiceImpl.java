@@ -163,10 +163,18 @@ public class BookingServiceImpl implements BookingService {
                 );
 
         /*
-         * Booking entity owns the lifecycle transition.
-         * It validates whether the current state can move to CANCELLED.
+         * Booking entity owns the booking lifecycle transition.
          */
         booking.cancel();
+
+        /*
+         * Release any inventory reservation associated
+         * with this booking.
+         *
+         * No reservation is also a valid case for
+         * a PENDING booking.
+         */
+        reservationService.releaseReservation(booking.getId());
 
         bookingRepository.save(booking);
 

@@ -11,6 +11,7 @@ import com.company.MakeMyTrip.booking_service.repository.InventoryRepository;
 import com.company.MakeMyTrip.booking_service.repository.ReservationRepository;
 import com.company.MakeMyTrip.booking_service.service.ReservationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReservationServiceImpl implements ReservationService {
 
     private final InventoryRepository inventoryRepository;
@@ -101,38 +103,77 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public Reservation releaseReservation(Long bookingId) {
-        Reservation reservation = reservationRepository.findByBookingId(bookingId)
-                .orElseThrow(() -> new BookingNotFoundException("Reservation not found for booking: " + bookingId));
+    public Optional<Reservation> releaseReservation(Long bookingId) {
 
-        Reservation lockedReservation = reservationRepository.findByIdForUpdate(reservation.getId())
-                .orElseThrow(() -> new BookingNotFoundException("Reservation not found: " + reservation.getId()));
+        Reservation reservation = reservationRepository
+                .findByBookingId(bookingId)
+                .orElse(null);
+
+        if (reservation == null) {
+            log.debug(
+                    "No reservation found for bookingId={}, nothing to release",
+                    bookingId
+            );
+
+            return Optional.empty();
+        }
+
+        Reservation lockedReservation =
+                reservationRepository.findByIdForUpdate(reservation.getId())
+                        .orElseThrow(() ->
+                                new BookingNotFoundException(
+                                        "Reservation not found: "
+                                                + reservation.getId()
+                                )
+                        );
 
         if (lockedReservation.getStatus() == ReservationStatus.RELEASED) {
-            return lockedReservation;
+            return Optional.of(lockedReservation);
         }
+
         if (lockedReservation.getStatus() == ReservationStatus.EXPIRED) {
-            return lockedReservation;
+            return Optional.of(lockedReservation);
         }
+
         Inventory inventory = lockedReservation.getInventory();
         int quantity = lockedReservation.getQuantity();
 
         int updatedRows;
 
         if (lockedReservation.getStatus() == ReservationStatus.HELD) {
-            updatedRows = inventoryRepository.releaseReservedCapacity(inventory.getId(), quantity);
+
+            updatedRows = inventoryRepository.releaseReservedCapacity(
+                    inventory.getId(),
+                    quantity
+            );
+
         } else if (lockedReservation.getStatus() == ReservationStatus.CONFIRMED) {
-            updatedRows = inventoryRepository.releaseConfirmedCapacity(inventory.getId(), quantity);
+
+            updatedRows = inventoryRepository.releaseConfirmedCapacity(
+                    inventory.getId(),
+                    quantity
+            );
+
         } else {
-            throw new InvalidBookingStateException("Reservation cannot be released from its current state");
+
+            throw new InvalidBookingStateException(
+                    "Reservation cannot be released from its current state"
+            );
         }
+
         if (updatedRows == 0) {
-            throw new IllegalStateException("Unable to release inventory capacity");
+            throw new IllegalStateException(
+                    "Unable to release inventory capacity"
+            );
         }
+
         lockedReservation.setStatus(ReservationStatus.RELEASED);
         lockedReservation.setUpdatedAt(LocalDateTime.now());
 
-        return reservationRepository.save(lockedReservation);
+        Reservation releasedReservation =
+                reservationRepository.save(lockedReservation);
+
+        return Optional.of(releasedReservation);
     }
 
     @Override
