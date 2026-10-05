@@ -17,7 +17,6 @@ import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextExcep
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.repository.IdempotencyRecordRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
-import com.company.MakeMyTrip.booking_service.service.BookingStateMachine;
 import com.company.MakeMyTrip.booking_service.service.ReservationService;
 
 import jakarta.transaction.Transactional;
@@ -35,7 +34,6 @@ import java.util.List;
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
-    private final BookingStateMachine bookingStateMachine;
     private final IdempotencyRecordRepository idempotencyRecordRepository;
     private final ReservationService reservationService;
 
@@ -52,11 +50,14 @@ public class BookingServiceImpl implements BookingService {
         booking.setReferenceId(request.getReferenceId());
         booking.setTravelDate(request.getTravelDate());
         booking.setAmount(request.getAmount());
-        booking.setStatus(BookingStatus.PENDING);
 
         Booking savedBooking = bookingRepository.save(booking);
 
-        log.info("Booking created successfully bookingId={} userId={}", savedBooking.getId(), userId);
+        log.info(
+                "Booking created successfully bookingId={} userId={}",
+                savedBooking.getId(),
+                userId
+        );
 
         return toResponse(savedBooking);
     }
@@ -66,10 +67,18 @@ public class BookingServiceImpl implements BookingService {
 
         Long userId = getRequiredUserId();
 
-        log.info("Fetching booking bookingId={} userId={}", bookingId, userId);
+        log.info(
+                "Fetching booking bookingId={} userId={}",
+                bookingId,
+                userId
+        );
 
         Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID " + bookingId));
+                .orElseThrow(() ->
+                        new BookingNotFoundException(
+                                "Booking not found with ID " + bookingId
+                        )
+                );
 
         return toResponse(booking);
     }
@@ -81,23 +90,40 @@ public class BookingServiceImpl implements BookingService {
 
         log.info("Fetching all bookings for userId={}", userId);
 
-        return bookingRepository.findAllByUserId(userId).stream().map(this::toResponse).toList();
+        return bookingRepository.findAllByUserId(userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @Override
-    public BookingResponse updateBooking(Long bookingId, BookingRequest request) {
+    public BookingResponse updateBooking(
+            Long bookingId,
+            BookingRequest request
+    ) {
 
         Long userId = getRequiredUserId();
 
-        log.info("Updating booking bookingId={} userId={}", bookingId, userId);
+        log.info(
+                "Updating booking bookingId={} userId={}",
+                bookingId,
+                userId
+        );
 
         Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID " + bookingId));
+                .orElseThrow(() ->
+                        new BookingNotFoundException(
+                                "Booking not found with ID " + bookingId
+                        )
+                );
 
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new BookingModificationNotAllowedException("Booking cannot be modified from status "
-                    + booking.getStatus());
+            throw new BookingModificationNotAllowedException(
+                    "Booking cannot be modified from status "
+                            + booking.getStatus()
+            );
         }
+
         booking.setBookingType(request.getBookingType());
         booking.setReferenceId(request.getReferenceId());
         booking.setTravelDate(request.getTravelDate());
@@ -106,7 +132,11 @@ public class BookingServiceImpl implements BookingService {
 
         Booking updatedBooking = bookingRepository.save(booking);
 
-        log.info("Booking updated successfully bookingId={}", bookingId);
+        log.info(
+                "Booking updated successfully bookingId={}",
+                bookingId
+        );
+
         return toResponse(updatedBooking);
     }
 
@@ -116,127 +146,228 @@ public class BookingServiceImpl implements BookingService {
 
         Long userId = getRequiredUserId();
 
-        log.info("Cancelling booking bookingId={} userId={}", bookingId, userId);
+        log.info(
+                "Cancelling booking bookingId={} userId={}",
+                bookingId,
+                userId
+        );
 
-        Booking booking = bookingRepository.findByIdAndUserId(bookingId, userId)
-                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID " + bookingId));
-        bookingStateMachine.validateTransition(booking.getStatus(), BookingStatus.CANCELLED);
+        Booking booking = bookingRepository.findByIdAndUserId(
+                        bookingId,
+                        userId
+                )
+                .orElseThrow(() ->
+                        new BookingNotFoundException(
+                                "Booking not found with ID " + bookingId
+                        )
+                );
 
-        booking.setStatus(BookingStatus.CANCELLED);
-        booking.setUpdatedAt(LocalDateTime.now());
+        /*
+         * Booking entity owns the lifecycle transition.
+         * It validates whether the current state can move to CANCELLED.
+         */
+        booking.cancel();
 
         bookingRepository.save(booking);
-        log.info("Booking cancelled successfully bookingId={}", bookingId);
+
+        log.info(
+                "Booking cancelled successfully bookingId={}",
+                bookingId
+        );
     }
 
     @Override
-    public BookingCountResponse getBookingCount(Long referenceId, String travelDate) {
+    public BookingCountResponse getBookingCount(
+            Long referenceId,
+            String travelDate
+    ) {
 
-        log.info("Fetching booking count referenceId={} travelDate={}", referenceId, travelDate);
+        log.info(
+                "Fetching booking count referenceId={} travelDate={}",
+                referenceId,
+                travelDate
+        );
+
         LocalDate parsedTravelDate = LocalDate.parse(travelDate);
-        int count = bookingRepository.countByReferenceIdAndTravelDate(referenceId, parsedTravelDate);
-        return BookingCountResponse.builder().referenceId(referenceId)
-                .travelDate(travelDate).currentBookings(count).build();
+
+        int count = bookingRepository.countByReferenceIdAndTravelDate(
+                referenceId,
+                parsedTravelDate
+        );
+
+        return BookingCountResponse.builder()
+                .referenceId(referenceId)
+                .travelDate(travelDate)
+                .currentBookings(count)
+                .build();
     }
 
     @Override
     @Transactional
-    public BookingConfirmationResponse confirmBooking(BookingConfirmationRequest request) {
+    public BookingConfirmationResponse confirmBooking(
+            BookingConfirmationRequest request
+    ) {
 
         Long userId = getRequiredUserId();
 
-        log.info("Confirming booking bookingId={} userId={} idempotencyKey={}",
-                request.getBookingId(), userId, request.getIdempotencyKey());
+        log.info(
+                "Confirming booking bookingId={} userId={} idempotencyKey={}",
+                request.getBookingId(),
+                userId,
+                request.getIdempotencyKey()
+        );
 
         // Step 1: Check whether this idempotency key was already processed.
-        IdempotencyRecord existingRecord = idempotencyRecordRepository.findByUserIdAndIdempotencyKey
-                (userId, request.getIdempotencyKey()).orElse(null);
+        IdempotencyRecord existingRecord =
+                idempotencyRecordRepository
+                        .findByUserIdAndIdempotencyKey(
+                                userId,
+                                request.getIdempotencyKey()
+                        )
+                        .orElse(null);
 
         if (existingRecord != null) {
 
-            if (!existingRecord.getBookingId().equals(request.getBookingId())) {
-
-                throw new InvalidBookingStateException("Idempotency key has already been used "
-                        + "for another booking");
+            if (!existingRecord.getBookingId().equals(
+                    request.getBookingId()
+            )) {
+                throw new InvalidBookingStateException(
+                        "Idempotency key has already been used "
+                                + "for another booking"
+                );
             }
-            Booking existingBooking = bookingRepository.findByIdAndUserId(existingRecord
-                    .getBookingId(), userId).orElseThrow(()
-                    -> new BookingNotFoundException("Booking not found with ID " + existingRecord.getBookingId()));
-            log.info("Duplicate confirmation request detected " + "bookingId={} idempotencyKey={}",
-                    existingBooking.getId(), request.getIdempotencyKey());
 
-            return BookingConfirmationResponse.builder().bookingId(existingBooking
-                    .getId()).status(existingBooking.getStatus().name())
+            Booking existingBooking =
+                    bookingRepository.findByIdAndUserId(
+                                    existingRecord.getBookingId(),
+                                    userId
+                            )
+                            .orElseThrow(() ->
+                                    new BookingNotFoundException(
+                                            "Booking not found with ID "
+                                                    + existingRecord.getBookingId()
+                                    )
+                            );
+
+            log.info(
+                    "Duplicate confirmation request detected " +
+                            "bookingId={} idempotencyKey={}",
+                    existingBooking.getId(),
+                    request.getIdempotencyKey()
+            );
+
+            return BookingConfirmationResponse.builder()
+                    .bookingId(existingBooking.getId())
+                    .status(existingBooking.getStatus().name())
                     .finalPrice(existingBooking.getAmount())
-                    .message("Request already processed").build();
+                    .message("Request already processed")
+                    .build();
         }
 
         // Step 2: Fetch the booking belonging to the authenticated user.
-        Booking booking = bookingRepository.findByIdAndUserId(request
-                .getBookingId(), userId)
-                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID "
-                        + request.getBookingId()));
+        Booking booking = bookingRepository.findByIdAndUserId(
+                        request.getBookingId(),
+                        userId
+                )
+                .orElseThrow(() ->
+                        new BookingNotFoundException(
+                                "Booking not found with ID "
+                                        + request.getBookingId()
+                        )
+                );
 
-        // Step 3: Validate the booking state transition.
-        bookingStateMachine.validateTransition(booking.getStatus(), BookingStatus.AWAITING_PAYMENT);
-
-        // Step 4: Check whether the quoted price has changed.
-        if (request.getQuotedPrice() != null && booking.getAmount() != null &&
-                booking.getAmount().compareTo(request.getQuotedPrice()) != 0) {
+        // Step 3: Check whether the quoted price has changed.
+        if (request.getQuotedPrice() != null
+                && booking.getAmount() != null
+                && booking.getAmount()
+                .compareTo(request.getQuotedPrice()) != 0) {
 
             var oldPrice = booking.getAmount();
+
             booking.setAmount(request.getQuotedPrice());
             booking.setUpdatedAt(LocalDateTime.now());
 
             Booking updatedBooking = bookingRepository.save(booking);
 
-            log.info("Booking price updated bookingId={} oldPrice={} newPrice={}",
-                    updatedBooking.getId(), oldPrice, updatedBooking.getAmount());
+            log.info(
+                    "Booking price updated bookingId={} oldPrice={} newPrice={}",
+                    updatedBooking.getId(),
+                    oldPrice,
+                    updatedBooking.getAmount()
+            );
 
-            return BookingConfirmationResponse.builder().bookingId(updatedBooking.getId())
+            return BookingConfirmationResponse.builder()
+                    .bookingId(updatedBooking.getId())
                     .status(updatedBooking.getStatus().name())
                     .finalPrice(updatedBooking.getAmount())
-                    .message("Price has changed. Please review the new price.").build();
+                    .message(
+                            "Price has changed. Please review the new price."
+                    )
+                    .build();
         }
 
-        // Step 5: Reserve inventory before moving the booking forward.
-        Reservation reservation = reservationService.reserveInventory(booking
-                .getId(), booking.getBookingType(),
-                booking.getReferenceId(), booking.getTravelDate(), 1);
+        // Step 4: Reserve inventory before moving the booking forward.
+        Reservation reservation = reservationService.reserveInventory(
+                booking.getId(),
+                booking.getBookingType(),
+                booking.getReferenceId(),
+                booking.getTravelDate(),
+                1
+        );
 
-        log.info("Inventory reserved bookingId={} reservationId={}", booking.getId(), reservation.getId());
+        log.info(
+                "Inventory reserved bookingId={} reservationId={}",
+                booking.getId(),
+                reservation.getId()
+        );
 
-        // Step 6: Move the booking to AWAITING_PAYMENT.
-        booking.setStatus(BookingStatus.AWAITING_PAYMENT);
-        booking.setUpdatedAt(LocalDateTime.now());
+        // Step 5: Move the booking to AWAITING_PAYMENT.
+        // The Booking entity validates the transition.
+        booking.moveToAwaitingPayment();
 
         Booking savedBooking = bookingRepository.save(booking);
 
-        // Step 7: Save the idempotency record in the same transaction.
-        IdempotencyRecord idempotencyRecord = IdempotencyRecord.builder().userId(userId)
-                .idempotencyKey(request.getIdempotencyKey())
-                .bookingId(savedBooking.getId())
-                .build();
+        // Step 6: Save the idempotency record in the same transaction.
+        IdempotencyRecord idempotencyRecord =
+                IdempotencyRecord.builder()
+                        .userId(userId)
+                        .idempotencyKey(request.getIdempotencyKey())
+                        .bookingId(savedBooking.getId())
+                        .build();
 
         idempotencyRecordRepository.save(idempotencyRecord);
 
-        log.info("Booking moved to AWAITING_PAYMENT " + "bookingId={} userId={} idempotencyKey={}",
-                savedBooking.getId(), userId, request.getIdempotencyKey());
+        log.info(
+                "Booking moved to AWAITING_PAYMENT " +
+                        "bookingId={} userId={} idempotencyKey={}",
+                savedBooking.getId(),
+                userId,
+                request.getIdempotencyKey()
+        );
 
         return BookingConfirmationResponse.builder()
                 .bookingId(savedBooking.getId())
                 .status(savedBooking.getStatus().name())
                 .finalPrice(savedBooking.getAmount())
-                .message("Booking is awaiting payment.").build();
+                .message("Booking is awaiting payment.")
+                .build();
     }
 
     @Override
     public BookingResponse getBookingByIdInternal(Long bookingId) {
 
-        log.info("Fetching booking internally bookingId={}", bookingId);
+        log.info(
+                "Fetching booking internally bookingId={}",
+                bookingId
+        );
 
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new BookingNotFoundException("Booking not found with ID " + bookingId));
+                .orElseThrow(() ->
+                        new BookingNotFoundException(
+                                "Booking not found with ID " + bookingId
+                        )
+                );
+
         return toResponse(booking);
     }
 
@@ -245,19 +376,23 @@ public class BookingServiceImpl implements BookingService {
         Long userId = UserContextHolder.getCurrentUserId();
 
         if (userId == null) {
-            throw new InvalidUserContextException("User identity is missing from the request context");
+            throw new InvalidUserContextException(
+                    "User identity is missing from the request context"
+            );
         }
+
         return userId;
     }
 
     private BookingResponse toResponse(Booking booking) {
 
-        return BookingResponse.builder().id(booking
-                .getId())
+        return BookingResponse.builder()
+                .id(booking.getId())
                 .userId(booking.getUserId())
                 .bookingType(booking.getBookingType())
                 .referenceId(booking.getReferenceId())
-                .status(booking.getStatus()).bookingDate(booking.getBookingDate())
+                .status(booking.getStatus())
+                .bookingDate(booking.getBookingDate())
                 .travelDate(booking.getTravelDate())
                 .amount(booking.getAmount())
                 .build();
