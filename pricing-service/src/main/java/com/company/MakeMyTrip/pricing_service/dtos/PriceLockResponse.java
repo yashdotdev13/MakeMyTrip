@@ -1,11 +1,11 @@
 package com.company.MakeMyTrip.pricing_service.dtos;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Data
@@ -15,9 +15,12 @@ import java.time.Instant;
 public class PriceLockResponse {
 
     private Long lockId;
+
     private Long referenceId;
+
     private String bookingType;
-    private Double lockedPrice;
-    private Long userId;
+
+    private BigDecimal lockedPrice;
+
     private Instant lockExpiryTime;
 }

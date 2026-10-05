@@ -1,5 +1,6 @@
 package com.company.MakeMyTrip.pricing_service.dtos;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -9,11 +10,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-public class PriceQuoteRequest {
+@NoArgsConstructor
+@AllArgsConstructor
+public class BasePriceRequest {
 
     @NotNull(message = "Reference ID is required")
     @Positive(message = "Reference ID must be greater than 0")
@@ -26,15 +29,18 @@ public class PriceQuoteRequest {
     )
     private String bookingType;
 
-    @NotNull(message = "Quantity is required")
-    @Positive(message = "Quantity must be greater than 0")
-    private Integer quantity;
-
-    @NotBlank(message = "Travel date is required")
-    @Size(
-            min = 10,
-            max = 10,
-            message = "Travel date must be in yyyy-MM-dd format"
+    @NotNull(message = "Price is required")
+    @DecimalMin(
+            value = "0.01",
+            message = "Price must be greater than 0"
     )
-    private String travelDate;
+    private BigDecimal price;
+
+    @NotBlank(message = "Currency is required")
+    @Size(
+            min = 3,
+            max = 3,
+            message = "Currency must be a 3-letter ISO currency code"
+    )
+    private String currency;
 }

@@ -1,0 +1,17 @@
+# Maven
+**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# VS Code
+.vscode/
+
+# Build output
+build/

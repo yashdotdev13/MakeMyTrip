@@ -10,6 +10,7 @@
         <module name="discovery-server" />
         <module name="common" />
         <module name="Auth-service" />
+        <module name="pricing-service" />
         <module name="booking-service" />
       </profile>
       <profile name="Annotation profile for api-gateway" enabled="true">
@@ -22,7 +23,6 @@
         <module name="api-gateway" />
         <module name="payment-service" />
         <module name="review-service" />
-        <module name="pricing-service" />
         <module name="notification-service" />
       </profile>
     </annotationProcessing>
