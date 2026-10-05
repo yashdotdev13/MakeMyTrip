@@ -2,6 +2,7 @@ package com.company.MakeMyTrip.booking_service.entity;
 
 import com.company.MakeMyTrip.booking_service.enums.BookingStatus;
 import com.company.MakeMyTrip.booking_service.enums.BookingType;
+import com.company.MakeMyTrip.booking_service.exceptions.InvalidBookingStateException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -93,4 +94,70 @@ public class Booking {
     )
     @Builder.Default
     private Long version = 0L;
+
+
+    public void moveToAwaitingPayment() {
+        transitionTo(BookingStatus.AWAITING_PAYMENT);
+    }
+
+    public void confirm() {
+        transitionTo(BookingStatus.CONFIRMED);
+    }
+
+    public void markPaymentFailed() {
+        transitionTo(BookingStatus.PAYMENT_FAILED);
+    }
+
+    public void expire() {
+        transitionTo(BookingStatus.EXPIRED);
+    }
+
+    public void cancel() {
+        transitionTo(BookingStatus.CANCELLED);
+    }
+
+    private void transitionTo(BookingStatus targetStatus) {
+
+        if (!isValidTransition(this.status, targetStatus)) {
+            throw new InvalidBookingStateException(
+                    "Cannot transition booking from "
+                            + this.status
+                            + " to "
+                            + targetStatus
+            );
+        }
+
+        this.status = targetStatus;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    private boolean isValidTransition(
+            BookingStatus currentStatus,
+            BookingStatus targetStatus
+    ) {
+        return switch (currentStatus) {
+
+            case PENDING ->
+                    targetStatus == BookingStatus.AWAITING_PAYMENT
+                            || targetStatus == BookingStatus.EXPIRED;
+
+            case AWAITING_PAYMENT ->
+                    targetStatus == BookingStatus.CONFIRMED
+                            || targetStatus == BookingStatus.PAYMENT_FAILED
+                            || targetStatus == BookingStatus.EXPIRED;
+
+            case CONFIRMED ->
+                    targetStatus == BookingStatus.CANCELLED;
+
+            case PAYMENT_FAILED ->
+                    targetStatus == BookingStatus.PENDING
+                            || targetStatus == BookingStatus.EXPIRED;
+
+            case EXPIRED ->
+                    targetStatus == BookingStatus.PENDING;
+
+            case CANCELLED ->
+                    false;
+        };
+    }
 }
