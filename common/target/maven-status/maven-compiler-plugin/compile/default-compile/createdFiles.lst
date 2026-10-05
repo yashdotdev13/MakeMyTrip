@@ -1,6 +1,0 @@
-com\company\MakeMyTrip\events\UserLoggedInEvent.class
-com\company\MakeMyTrip\events\BookingDemandEventType.class
-com\company\MakeMyTrip\events\BookingDemandEvent.class
-com\company\MakeMyTrip\events\KafkaTopics.class
-com\company\MakeMyTrip\events\UserRegisteredEvent.class
-com\company\MakeMyTrip\events\UserLoggedOutEvent.class
