@@ -1,16 +1,25 @@
 package com.company.MakeMyTrip.pricing_service.repository;
 
 import com.company.MakeMyTrip.pricing_service.entity.PriceLock;
+import com.company.MakeMyTrip.pricing_service.enums.PriceLockStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
-public interface PriceLockRepository extends JpaRepository<PriceLock,Long> {
+public interface PriceLockRepository
+        extends JpaRepository<PriceLock, Long> {
 
-    // check if the user already has a lock for a specific booking reference
-    Optional<PriceLock> findByReferenceIdAndBookingTypeAndUserId(Long referenceId,String bookingType, Long userId);
+    Optional<PriceLock> findByReferenceIdAndBookingTypeAndUserIdAndStatus(
+            Long referenceId,
+            String bookingType,
+            Long userId,
+            PriceLockStatus status
+    );
 
-
-    // delete expired locks
-    void deleteByValidTillBefore(java.time.LocalDateTime now);
+    List<PriceLock> findByStatusAndValidTillBefore(
+            PriceLockStatus status,
+            LocalDateTime time
+    );
 }

@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
                 .toList();
 
         ApiError apiError = ApiError.builder()
-                .status(HttpStatus.BAD_REQUEST)
+                .status(String.valueOf(HttpStatus.BAD_REQUEST))
                 .message("Input validation failed")
                 .subErrors(errors)
                 .build();
@@ -69,7 +69,7 @@ public class GlobalExceptionHandler {
             String message) {
 
         ApiError apiError = ApiError.builder()
-                .status(status)
+                .status(String.valueOf(status))
                 .message(message)
                 .build();
 
@@ -80,7 +80,7 @@ public class GlobalExceptionHandler {
             ApiError apiError) {
 
         return ResponseEntity
-                .status(apiError.getStatus())
+                .status(Integer.parseInt(apiError.getStatus()))
                 .body(new ApiResponse<>(apiError));
     }
 }

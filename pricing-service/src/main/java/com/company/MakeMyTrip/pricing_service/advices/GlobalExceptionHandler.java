@@ -3,6 +3,7 @@ package com.company.MakeMyTrip.pricing_service.advices;
 
 
 
+import com.company.MakeMyTrip.pricing_service.exceptions.InvalidTravelDateException;
 import com.company.MakeMyTrip.pricing_service.exceptions.ResourceNotFoundException;
 import com.company.MakeMyTrip.pricing_service.exceptions.RuntimeConflictException;
 import org.apache.tomcat.websocket.AuthenticationException;
@@ -82,6 +83,20 @@ public class GlobalExceptionHandler {
         return buildErrorResponseEntity(apiError);
     }
 
+
+    @ExceptionHandler(InvalidTravelDateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidTravelDate(
+            InvalidTravelDateException exception
+    ) {
+        ApiError error = new ApiError(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse<>(error));
+    }
     private ResponseEntity<ApiResponse<?>> buildErrorResponseEntity(ApiError apiError) {
         return new ResponseEntity<>(new ApiResponse<>(apiError), apiError.getStatus());
     }
