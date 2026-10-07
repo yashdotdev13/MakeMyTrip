@@ -17,7 +17,8 @@ import java.util.Map;
 public class KafkaConsumerConfig {
 
     @Bean
-    public ConsumerFactory<String, PaymentRequestedEvent> paymentRequestedConsumerFactory() {
+    public ConsumerFactory<String, PaymentRequestedEvent>
+    paymentRequestedConsumerFactory() {
 
         Map<String, Object> config = new HashMap<>();
 
@@ -49,16 +50,6 @@ public class KafkaConsumerConfig {
         config.put(
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
                 JsonDeserializer.class
-        );
-
-        config.put(
-                JsonDeserializer.TRUSTED_PACKAGES,
-                "com.company.MakeMyTrip.events"
-        );
-
-        config.put(
-                JsonDeserializer.USE_TYPE_INFO_HEADERS,
-                false
         );
 
         JsonDeserializer<PaymentRequestedEvent> deserializer =
