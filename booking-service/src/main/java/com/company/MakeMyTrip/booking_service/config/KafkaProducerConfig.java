@@ -1,6 +1,5 @@
 package com.company.MakeMyTrip.booking_service.config;
 
-import com.company.MakeMyTrip.events.BookingDemandEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
@@ -17,8 +16,7 @@ import java.util.Map;
 public class KafkaProducerConfig {
 
     @Bean
-    public ProducerFactory<String, BookingDemandEvent> producerFactory() {
-
+    public ProducerFactory<String, Object> producerFactory() {
         Map<String, Object> config = new HashMap<>();
 
         config.put(
@@ -40,8 +38,8 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, BookingDemandEvent> kafkaTemplate(
-            ProducerFactory<String, BookingDemandEvent> producerFactory
+    public KafkaTemplate<String, Object> kafkaTemplate(
+            ProducerFactory<String, Object> producerFactory
     ) {
         return new KafkaTemplate<>(producerFactory);
     }

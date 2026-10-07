@@ -15,12 +15,15 @@ import com.company.MakeMyTrip.booking_service.exceptions.BookingNotFoundExceptio
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidBookingStateException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextException;
 import com.company.MakeMyTrip.booking_service.kafka.BookingDemandEventPublisher;
+import com.company.MakeMyTrip.booking_service.kafka.PaymentRequestedEventPublisher;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.repository.IdempotencyRecordRepository;
 import com.company.MakeMyTrip.booking_service.service.BookingService;
 import com.company.MakeMyTrip.booking_service.service.ReservationService;
 
 import com.company.MakeMyTrip.events.BookingDemandEventType;
+import com.company.MakeMyTrip.events.PaymentCompletedEvent;
+import com.company.MakeMyTrip.events.PaymentFailedEvent;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +42,7 @@ public class BookingServiceImpl implements BookingService {
     private final IdempotencyRecordRepository idempotencyRecordRepository;
     private final ReservationService reservationService;
     private final BookingDemandEventPublisher bookingDemandEventPublisher;
+    private final PaymentRequestedEventPublisher paymentRequestedEventPublisher;
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
@@ -356,8 +360,15 @@ public class BookingServiceImpl implements BookingService {
 
         idempotencyRecordRepository.save(idempotencyRecord);
 
+        paymentRequestedEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getUserId(),
+                savedBooking.getAmount(),
+                "RAZORPAY"
+        );
+
         log.info(
-                "Booking moved to AWAITING_PAYMENT " +
+                "Booking moved to AWAITING_PAYMENT and payment requested " +
                         "bookingId={} userId={} idempotencyKey={}",
                 savedBooking.getId(),
                 userId,
@@ -388,6 +399,117 @@ public class BookingServiceImpl implements BookingService {
                 );
 
         return toResponse(booking);
+    }
+
+    @Override
+    @Transactional
+    public void handlePaymentCompleted(PaymentCompletedEvent event) {
+
+        log.info(
+                "Processing payment completed event: paymentId={}, bookingId={}, transactionId={}",
+                event.paymentId(),
+                event.bookingId(),
+                event.transactionId()
+        );
+
+        Booking booking = bookingRepository.findById(event.bookingId())
+                .orElseThrow(() ->
+                        new BookingNotFoundException(
+                                "Booking not found with ID " + event.bookingId()
+                        )
+                );
+
+        /*
+         * Kafka events can be delivered more than once.
+         *
+         * If the booking is already confirmed, this event has
+         * effectively already been processed.
+         */
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+
+            log.info(
+                    "Payment completed event already processed: bookingId={}",
+                    event.bookingId()
+            );
+
+            return;
+        }
+
+        if (booking.getStatus() != BookingStatus.AWAITING_PAYMENT) {
+
+            throw new InvalidBookingStateException(
+                    "Booking cannot be confirmed from status "
+                            + booking.getStatus()
+            );
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setUpdatedAt(LocalDateTime.now());
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        log.info(
+                "Booking confirmed after successful payment: bookingId={}, paymentId={}, transactionId={}",
+                savedBooking.getId(),
+                event.paymentId(),
+                event.transactionId()
+        );
+    }
+
+    @Override
+    @Transactional
+    public void handlePaymentFailed(PaymentFailedEvent event) {
+
+        log.warn(
+                "Processing payment failed event: bookingId={}, reason={}",
+                event.bookingId(),
+                event.reason()
+        );
+
+        Booking booking = bookingRepository.findById(event.bookingId())
+                .orElseThrow(() ->
+                        new BookingNotFoundException(
+                                "Booking not found with ID " + event.bookingId()
+                        )
+                );
+
+        /*
+         * Kafka events can be delivered more than once.
+         */
+        if (booking.getStatus() == BookingStatus.PAYMENT_FAILED) {
+
+            log.info(
+                    "Payment failed event already processed: bookingId={}",
+                    event.bookingId()
+            );
+
+            return;
+        }
+
+        if (booking.getStatus() != BookingStatus.AWAITING_PAYMENT) {
+
+            throw new InvalidBookingStateException(
+                    "Booking cannot be marked payment failed from status "
+                            + booking.getStatus()
+            );
+        }
+
+        /*
+         * Payment failed, therefore the inventory reservation
+         * created during confirmation must be released.
+         */
+        reservationService.releaseReservation(booking.getId());
+
+        booking.setStatus(BookingStatus.PAYMENT_FAILED);
+        booking.setUpdatedAt(LocalDateTime.now());
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        log.info(
+                "Booking marked as payment failed: bookingId={}, reason={}",
+                savedBooking.getId(),
+                event.reason()
+        );
     }
 
     private Long getRequiredUserId() {
