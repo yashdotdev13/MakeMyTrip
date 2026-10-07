@@ -15,18 +15,13 @@ public class BookingDemandConsumer {
 
     private final DemandProjectionService demandProjectionService;
 
-    @KafkaListener(
-            topics = KafkaTopics.BOOKING_DEMAND
-    )
+    @KafkaListener(topics = KafkaTopics.BOOKING_DEMAND)
     public void consume(BookingDemandEvent event) {
 
-        log.info(
-                "Received booking demand event: bookingId={}, referenceId={}, eventType={}",
+        log.info("Received booking demand event: bookingId={}, referenceId={}, eventType={}",
                 event.bookingId(),
                 event.referenceId(),
-                event.eventType()
-        );
-
+                event.eventType());
         demandProjectionService.processBookingDemandEvent(event);
     }
 }
