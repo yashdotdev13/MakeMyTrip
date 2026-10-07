@@ -419,29 +419,30 @@ public class BookingServiceImpl implements BookingService {
                         )
                 );
 
-        /*
-         * Kafka events can be delivered more than once.
-         *
-         * If the booking is already confirmed, this event has
-         * effectively already been processed.
-         */
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
-
             log.info(
                     "Payment completed event already processed: bookingId={}",
                     event.bookingId()
             );
-
             return;
         }
 
         if (booking.getStatus() != BookingStatus.AWAITING_PAYMENT) {
-
             throw new InvalidBookingStateException(
-                    "Booking cannot be confirmed from status "
-                            + booking.getStatus()
+                    "Booking cannot be confirmed from status " + booking.getStatus()
             );
         }
+
+        // Confirm the reservation and move inventory from
+        // reserved capacity to confirmed capacity.
+        Reservation reservation =
+                reservationService.confirmReservation(booking.getId());
+
+        log.info(
+                "Reservation confirmed after successful payment: bookingId={}, reservationId={}",
+                booking.getId(),
+                reservation.getId()
+        );
 
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setUpdatedAt(LocalDateTime.now());
