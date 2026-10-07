@@ -86,6 +86,12 @@
 			<version>1.4.6</version>
 		</dependency>
 
+
+		<dependency>
+			<groupId>com.company.MakeMyTrip</groupId>
+			<artifactId>common</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
