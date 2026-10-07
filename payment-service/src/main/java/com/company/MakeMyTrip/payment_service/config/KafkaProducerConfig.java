@@ -1,4 +1,4 @@
-package com.company.MakeMyTrip.booking_service.config;
+package com.company.MakeMyTrip.payment_service.config;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -17,6 +17,7 @@ public class KafkaProducerConfig {
 
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
+
         Map<String, Object> config = new HashMap<>();
 
         config.put(

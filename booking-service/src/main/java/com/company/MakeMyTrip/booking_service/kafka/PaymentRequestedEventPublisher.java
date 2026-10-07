@@ -1,15 +1,14 @@
 package com.company.MakeMyTrip.booking_service.kafka;
 
-
-import com.company.MakeMyTrip.events.BookingDemandEvent;
-import com.company.MakeMyTrip.events.BookingDemandEventType;
 import com.company.MakeMyTrip.events.KafkaTopics;
+import com.company.MakeMyTrip.events.PaymentRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -17,33 +16,29 @@ import java.util.concurrent.CompletableFuture;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class BookingDemandEventPublisher {
+public class PaymentRequestedEventPublisher {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public void publish(
             Long bookingId,
-            Long referenceId,
-            String bookingType,
-            Integer quantity,
-            String travelDate,
-            BookingDemandEventType eventType
+            Long userId,
+            BigDecimal amount,
+            String paymentMethod
     ) {
 
-        BookingDemandEvent event = new BookingDemandEvent(
+        PaymentRequestedEvent event = new PaymentRequestedEvent(
                 UUID.randomUUID().toString(),
                 bookingId,
-                referenceId,
-                bookingType,
-                quantity,
-                travelDate,
-                eventType,
+                userId,
+                amount,
+                paymentMethod,
                 Instant.now()
         );
 
         CompletableFuture<SendResult<String, Object>> future =
                 kafkaTemplate.send(
-                        KafkaTopics.BOOKING_DEMAND,
+                        KafkaTopics.PAYMENT_REQUESTED,
                         bookingId.toString(),
                         event
                 );
@@ -51,21 +46,21 @@ public class BookingDemandEventPublisher {
         future.whenComplete((result, exception) -> {
 
             if (exception != null) {
+
                 log.error(
-                        "Failed to publish booking demand event: bookingId={}, referenceId={}, eventType={}",
+                        "Failed to publish payment requested event: bookingId={}, userId={}",
                         bookingId,
-                        referenceId,
-                        eventType,
+                        userId,
                         exception
                 );
+
                 return;
             }
 
             log.info(
-                    "Booking demand event published successfully: bookingId={}, referenceId={}, eventType={}, topic={}, partition={}, offset={}",
+                    "Payment requested event published successfully: bookingId={}, userId={}, topic={}, partition={}, offset={}",
                     bookingId,
-                    referenceId,
-                    eventType,
+                    userId,
                     result.getRecordMetadata().topic(),
                     result.getRecordMetadata().partition(),
                     result.getRecordMetadata().offset()
