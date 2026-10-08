@@ -9,12 +9,15 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationService {
 
     private final JavaMailSender javaMailSender;
+    private final NotificationContactStore notificationContactStore;
 
     public void sendEmail(EmailRequest request) {
 
@@ -39,9 +42,7 @@ public class NotificationService {
         );
     }
 
-    public void sendPaymentCompletedEmail(
-            PaymentCompletedEvent event
-    ) {
+    public void sendPaymentCompletedEmail(PaymentCompletedEvent event) {
 
         log.info(
                 "Preparing payment completed notification: bookingId={}, paymentId={}",
@@ -49,8 +50,18 @@ public class NotificationService {
                 event.paymentId()
         );
 
+        Optional<String> recipient = resolveRecipient(event.userId());
+
+        if (recipient.isEmpty()) {
+            log.warn(
+                    "Skipping payment completed notification: no email found for userId={}",
+                    event.userId()
+            );
+            return;
+        }
+
         EmailRequest request = EmailRequest.builder()
-                .to(resolveRecipient(event.userId()))
+                .to(recipient.get())
                 .subject("Payment Successful - MakeMyTrip")
                 .body(
                         "Your payment was completed successfully.\n\n"
@@ -65,17 +76,25 @@ public class NotificationService {
         sendEmail(request);
     }
 
-    public void sendPaymentFailedEmail(
-            PaymentFailedEvent event
-    ) {
+    public void sendPaymentFailedEmail(PaymentFailedEvent event) {
 
         log.info(
                 "Preparing payment failed notification: bookingId={}",
                 event.bookingId()
         );
 
+        Optional<String> recipient = resolveRecipient(event.userId());
+
+        if (recipient.isEmpty()) {
+            log.warn(
+                    "Skipping payment failed notification: no email found for userId={}",
+                    event.userId()
+            );
+            return;
+        }
+
         EmailRequest request = EmailRequest.builder()
-                .to(resolveRecipient(event.userId()))
+                .to(recipient.get())
                 .subject("Payment Failed - MakeMyTrip")
                 .body(
                         "Your payment could not be completed.\n\n"
@@ -89,17 +108,10 @@ public class NotificationService {
         sendEmail(request);
     }
 
-    private String resolveRecipient(Long userId) {
+    private Optional<String> resolveRecipient(Long userId) {
 
-        /*
-         * Temporary recipient resolution.
-         *
-         * The current Payment events contain userId but do not
-         * contain the user's email address.
-         *
-         * We will replace this with the proper notification
-         * recipient strategy before considering this flow complete.
-         */
-        return "your-email@gmail.com";
+        return Optional.ofNullable(
+                notificationContactStore.getEmail(userId)
+        );
     }
 }
