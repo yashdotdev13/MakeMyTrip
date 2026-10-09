@@ -15,6 +15,7 @@ import com.company.MakeMyTrip.booking_service.exceptions.BookingNotFoundExceptio
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidBookingStateException;
 import com.company.MakeMyTrip.booking_service.exceptions.InvalidUserContextException;
 import com.company.MakeMyTrip.booking_service.kafka.BookingDemandEventPublisher;
+import com.company.MakeMyTrip.booking_service.kafka.BookingLifecycleEventPublisher;
 import com.company.MakeMyTrip.booking_service.kafka.PaymentRequestedEventPublisher;
 import com.company.MakeMyTrip.booking_service.repository.BookingRepository;
 import com.company.MakeMyTrip.booking_service.repository.IdempotencyRecordRepository;
@@ -43,6 +44,7 @@ public class BookingServiceImpl implements BookingService {
     private final ReservationService reservationService;
     private final BookingDemandEventPublisher bookingDemandEventPublisher;
     private final PaymentRequestedEventPublisher paymentRequestedEventPublisher;
+    private final BookingLifecycleEventPublisher bookingLifecycleEventPublisher;
 
     @Override
     public BookingResponse createBooking(BookingRequest request) {
@@ -59,6 +61,13 @@ public class BookingServiceImpl implements BookingService {
         booking.setAmount(request.getAmount());
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        bookingLifecycleEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getUserId(),
+                savedBooking.getBookingType().name(),
+                savedBooking.getStatus().name()
+        );
 
         bookingDemandEventPublisher.publish(
                 savedBooking.getId(),
@@ -183,6 +192,13 @@ public class BookingServiceImpl implements BookingService {
         reservationService.releaseReservation(booking.getId());
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        bookingLifecycleEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getUserId(),
+                savedBooking.getBookingType().name(),
+                savedBooking.getStatus().name()
+        );
 
         bookingDemandEventPublisher.publish(
                 savedBooking.getId(),
@@ -350,6 +366,13 @@ public class BookingServiceImpl implements BookingService {
 
         Booking savedBooking = bookingRepository.save(booking);
 
+        bookingLifecycleEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getUserId(),
+                savedBooking.getBookingType().name(),
+                savedBooking.getStatus().name()
+        );
+
         // Step 6: Save the idempotency record in the same transaction.
         IdempotencyRecord idempotencyRecord =
                 IdempotencyRecord.builder()
@@ -449,6 +472,13 @@ public class BookingServiceImpl implements BookingService {
 
         Booking savedBooking = bookingRepository.save(booking);
 
+        bookingLifecycleEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getUserId(),
+                savedBooking.getBookingType().name(),
+                savedBooking.getStatus().name()
+        );
+
         log.info(
                 "Booking confirmed after successful payment: bookingId={}, paymentId={}, transactionId={}",
                 savedBooking.getId(),
@@ -505,6 +535,13 @@ public class BookingServiceImpl implements BookingService {
         booking.setUpdatedAt(LocalDateTime.now());
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        bookingLifecycleEventPublisher.publish(
+                savedBooking.getId(),
+                savedBooking.getUserId(),
+                savedBooking.getBookingType().name(),
+                savedBooking.getStatus().name()
+        );
 
         log.info(
                 "Booking marked as payment failed: bookingId={}, reason={}",
