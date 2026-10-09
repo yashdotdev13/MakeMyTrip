@@ -13,7 +13,7 @@
         <module name="pricing-service" />
         <module name="booking-service" />
       </profile>
-      <profile name="Annotation profile for payment-service" enabled="true">
+      <profile name="Annotation profile for notification-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
@@ -22,8 +22,8 @@
         </processorPath>
         <module name="api-gateway" />
         <module name="payment-service" />
-        <module name="review-service" />
         <module name="notification-service" />
+        <module name="review-service" />
       </profile>
     </annotationProcessing>
   </component>

@@ -34,7 +34,6 @@ public class ReviewServiceImpl implements ReviewService {
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("User {} is creating a new review for bookingId={}", userId, request.getBookingId());
 
-        // ✅ Validate booking exists using internal booking endpoint
         try {
             BookingResponse booking = bookingClient.getBookingById(request.getBookingId());
             if (booking.getUserId() == null) {
@@ -51,7 +50,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new ResourceClosedException("Booking not found or inaccessible: " + request.getBookingId());
         }
 
-        // ✅ Proceed to save review
+        //  Proceed to save review
         Review review = new Review();
         review.setBookingId(request.getBookingId());
         review.setUserId(userId);
