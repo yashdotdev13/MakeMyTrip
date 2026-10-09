@@ -1,7 +1,6 @@
 package com.company.MakeMyTrip.review_service.service.Impl;
 
 import com.company.MakeMyTrip.review_service.auth.UserContextHolder;
-import com.company.MakeMyTrip.review_service.client.BookingClient;
 import com.company.MakeMyTrip.review_service.dtos.BookingResponse;
 import com.company.MakeMyTrip.review_service.dtos.ReviewRequest;
 import com.company.MakeMyTrip.review_service.dtos.ReviewResponse;
