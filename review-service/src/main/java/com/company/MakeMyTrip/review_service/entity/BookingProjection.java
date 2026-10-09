@@ -8,10 +8,12 @@ import java.time.Instant;
 @Entity
 @Table(
         name = "booking_projections",
-        indexes = @Index(
-                name = "idx_booking_projection_user",
-                columnList = "user_id"
-        )
+        indexes = {
+                @Index(
+                        name = "idx_booking_projection_user",
+                        columnList = "user_id"
+                )
+        }
 )
 @Getter
 @Setter
@@ -21,17 +23,18 @@ import java.time.Instant;
 public class BookingProjection {
 
     @Id
+    @Column(name = "booking_id")
     private Long bookingId;
 
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false)
+    @Column(name = "booking_type", nullable = false, length = 30)
     private String bookingType;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private String status;
 
-    @Column(nullable = false)
+    @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
 }
