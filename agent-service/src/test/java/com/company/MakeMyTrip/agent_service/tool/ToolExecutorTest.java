@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -64,5 +65,48 @@ class ToolExecutorTest {
                         " "
                 )
         );
+    }
+
+
+    @Test
+    void rejectsUnsupportedArguments() {
+        AgentTool tool = mock(AgentTool.class);
+
+        when(tool.getName()).thenReturn("my_bookings");
+        when(tool.getAllowedArguments()).thenReturn(Set.of());
+
+        ToolExecutor executor = new ToolExecutor(
+                new ToolRegistry(java.util.List.of(tool))
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> executor.execute(
+                        "my_bookings",
+                        Map.of("userId", 123),
+                        "Bearer test-token"
+                )
+        );
+
+        verify(tool, never()).execute(anyMap(), anyString());
+    }
+
+
+
+    @Test
+    void executeSafelyReturnsGenericErrorForUnknownTool() {
+        ToolExecutor executor = new ToolExecutor(
+                new ToolRegistry(java.util.List.of())
+        );
+
+        ToolExecutionResult result = executor.executeSafely(
+                "unknown_tool",
+                Map.of(),
+                "Bearer test-token"
+        );
+
+        assertFalse(result.success());
+        assertEquals("Invalid tool request.", result.error());
+        assertTrue(result.data().isEmpty());
     }
 }

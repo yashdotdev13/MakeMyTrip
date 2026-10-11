@@ -35,4 +35,15 @@ public class ToolRegistry {
     public Collection<AgentTool> getAllTools() {
         return tools.values();
     }
+
+
+    public java.util.List<ToolDefinition> getToolDefinitions() {
+        return tools.values().stream()
+                .map(tool -> new ToolDefinition(
+                        tool.getName(),
+                        tool.getDescription(),
+                        tool.getAllowedArguments()
+                ))
+                .toList();
+    }
 }

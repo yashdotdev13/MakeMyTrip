@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class MyBookingsTool implements AgentTool {
@@ -40,5 +41,10 @@ public class MyBookingsTool implements AgentTool {
                 "count",
                 bookings.size()
         );
+    }
+
+    @Override
+    public Set<String> getAllowedArguments() {
+        return Set.of();
     }
 }

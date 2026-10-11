@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 @Component
 public class ToolExecutor {
@@ -36,11 +37,46 @@ public class ToolExecutor {
             );
         }
 
+        // Resolve only registered tools.
         AgentTool tool = toolRegistry.getTool(toolName);
 
+        // Reject arguments that the tool does not support.
+        Set<String> allowedArguments = tool.getAllowedArguments();
+
+        for (String argumentName : arguments.keySet()) {
+            if (!allowedArguments.contains(argumentName)) {
+                throw new IllegalArgumentException(
+                        "Unsupported argument for tool '"
+                                + toolName + "': " + argumentName
+                );
+            }
+        }
+
+        // Execute after validation.
         return Objects.requireNonNull(
                 tool.execute(arguments, authorization),
                 "Tool execution returned null"
         );
+    }
+
+
+    public ToolExecutionResult executeSafely(
+            String toolName,
+            Map<String, Object> arguments,
+            String authorization
+    ) {
+        try {
+            return ToolExecutionResult.success(
+                    execute(toolName, arguments, authorization)
+            );
+        } catch (IllegalArgumentException exception) {
+            return ToolExecutionResult.failure(
+                    "Invalid tool request."
+            );
+        } catch (Exception exception) {
+            return ToolExecutionResult.failure(
+                    "Tool execution failed."
+            );
+        }
     }
 }
