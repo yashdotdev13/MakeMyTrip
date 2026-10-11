@@ -104,7 +104,6 @@ class ToolExecutorTest {
                 Map.of(),
                 "Bearer test-token"
         );
-
         assertFalse(result.success());
         assertEquals("Invalid tool request.", result.error());
         assertTrue(result.data().isEmpty());
