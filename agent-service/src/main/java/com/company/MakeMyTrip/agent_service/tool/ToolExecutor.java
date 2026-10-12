@@ -15,26 +15,15 @@ public class ToolExecutor {
         this.toolRegistry = toolRegistry;
     }
 
-    public Map<String, Object> execute(
-            String toolName,
-            Map<String, Object> arguments,
-            String authorization
-    ) {
+    public Map<String, Object> execute(String toolName, Map<String, Object> arguments, String authorization) {
         if (toolName == null || toolName.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Tool name must not be blank"
-            );
+            throw new IllegalArgumentException("Tool name must not be blank");
         }
 
-        Objects.requireNonNull(
-                arguments,
-                "Tool arguments must not be null"
-        );
+        Objects.requireNonNull(arguments, "Tool arguments must not be null");
 
         if (authorization == null || authorization.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Authorization must not be blank"
-            );
+            throw new IllegalArgumentException("Authorization must not be blank");
         }
 
         // Resolve only registered tools.
@@ -45,38 +34,21 @@ public class ToolExecutor {
 
         for (String argumentName : arguments.keySet()) {
             if (!allowedArguments.contains(argumentName)) {
-                throw new IllegalArgumentException(
-                        "Unsupported argument for tool '"
-                                + toolName + "': " + argumentName
-                );
+                throw new IllegalArgumentException("Unsupported argument for tool '"
+                        + toolName + "': " + argumentName);
             }
         }
-
         // Execute after validation.
-        return Objects.requireNonNull(
-                tool.execute(arguments, authorization),
-                "Tool execution returned null"
-        );
+        return Objects.requireNonNull(tool.execute(arguments, authorization),
+                "Tool execution returned null");
     }
-
-
-    public ToolExecutionResult executeSafely(
-            String toolName,
-            Map<String, Object> arguments,
-            String authorization
-    ) {
+    public ToolExecutionResult executeSafely(String toolName, Map<String, Object> arguments, String authorization) {
         try {
-            return ToolExecutionResult.success(
-                    execute(toolName, arguments, authorization)
-            );
+            return ToolExecutionResult.success(execute(toolName, arguments, authorization));
         } catch (IllegalArgumentException exception) {
-            return ToolExecutionResult.failure(
-                    "Invalid tool request."
-            );
+            return ToolExecutionResult.failure("Invalid tool request.");
         } catch (Exception exception) {
-            return ToolExecutionResult.failure(
-                    "Tool execution failed."
-            );
+            return ToolExecutionResult.failure("Tool execution failed.");
         }
     }
 }
