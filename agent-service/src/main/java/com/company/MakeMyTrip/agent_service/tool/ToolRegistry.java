@@ -13,37 +13,24 @@ public class ToolRegistry {
     private final Map<String, AgentTool> tools;
 
     public ToolRegistry(Collection<AgentTool> agentTools) {
-        this.tools = agentTools.stream()
-                .collect(Collectors.toUnmodifiableMap(
-                        AgentTool::getName,
-                        Function.identity()
-                ));
+        this.tools = agentTools.stream().collect(Collectors.toUnmodifiableMap(AgentTool::getName,
+                Function.identity()));
     }
 
     public AgentTool getTool(String name) {
         AgentTool tool = tools.get(name);
 
         if (tool == null) {
-            throw new IllegalArgumentException(
-                    "Unknown agent tool: " + name
-            );
+            throw new IllegalArgumentException("Unknown agent tool: " + name);
         }
-
         return tool;
     }
-
     public Collection<AgentTool> getAllTools() {
         return tools.values();
     }
 
-
     public java.util.List<ToolDefinition> getToolDefinitions() {
-        return tools.values().stream()
-                .map(tool -> new ToolDefinition(
-                        tool.getName(),
-                        tool.getDescription(),
-                        tool.getAllowedArguments()
-                ))
-                .toList();
+        return tools.values().stream().map(tool -> new ToolDefinition(tool.getName(),
+                tool.getDescription(), tool.getAllowedArguments())).toList();
     }
 }
