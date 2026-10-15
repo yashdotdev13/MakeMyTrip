@@ -42,7 +42,6 @@ public class MyBookingsTool implements AgentTool {
                 bookings.size()
         );
     }
-
     @Override
     public Set<String> getAllowedArguments() {
         return Set.of();
