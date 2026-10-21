@@ -1,4 +1,3 @@
-
 package com.company.MakeMyTrip.agent_service.service;
 
 import com.company.MakeMyTrip.agent_service.dto.AgentDecision;
@@ -14,45 +13,27 @@ public class AgentRequestOrchestrator {
     private final AgentDecisionService decisionService;
     private final ToolOrchestrator toolOrchestrator;
 
-    public AgentRequestOrchestrator(
-            AgentDecisionService decisionService,
-            ToolOrchestrator toolOrchestrator
-    ) {
+    public AgentRequestOrchestrator(AgentDecisionService decisionService, ToolOrchestrator toolOrchestrator) {
         this.decisionService = decisionService;
         this.toolOrchestrator = toolOrchestrator;
     }
 
-    public AgentRequestResult handle(
-            String userMessage,
-            String authorization
-    ) {
+    public AgentRequestResult handle(String userMessage, String authorization) {
         if (userMessage == null || userMessage.isBlank()) {
-            throw new IllegalArgumentException(
-                    "User message must not be blank"
-            );
+            throw new IllegalArgumentException("User message must not be blank");
         }
 
-        AgentDecision decision = Objects.requireNonNull(
-                decisionService.decide(userMessage),
-                "Decision service returned null"
-        );
+        AgentDecision decision = Objects.requireNonNull(decisionService.decide(userMessage),
+                "Decision service returned null");
 
         if (decision.type() == AgentDecision.DecisionType.TEXT_RESPONSE) {
             return AgentRequestResult.textResponse(decision.response());
         }
 
         if (decision.type() == AgentDecision.DecisionType.TOOL_CALL) {
-            var result = toolOrchestrator.execute(
-                    decision.toolName(),
-                    decision.arguments(),
-                    authorization
-            );
-
+            var result = toolOrchestrator.execute(decision.toolName(), decision.arguments(), authorization);
             return AgentRequestResult.toolResult(result);
         }
-
-        throw new IllegalArgumentException(
-                "Unsupported agent decision type"
-        );
+        throw new IllegalArgumentException("Unsupported agent decision type");
     }
 }

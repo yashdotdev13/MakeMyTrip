@@ -28,20 +28,12 @@ public class MyBookingsTool implements AgentTool {
     }
 
     @Override
-    public Map<String, Object> execute(
-            Map<String, Object> arguments,
-            String authorization
-    ) {
-        List<AgentBookingResponse> bookings =
-                agentBookingService.getMyBookings(authorization);
+    public Map<String, Object> execute(Map<String, Object> arguments, String authorization) {
+        List<AgentBookingResponse> bookings = agentBookingService.getMyBookings(authorization);
 
-        return Map.of(
-                "bookings",
-                bookings,
-                "count",
-                bookings.size()
-        );
+        return Map.of("bookings", bookings, "count", bookings.size());
     }
+
     @Override
     public Set<String> getAllowedArguments() {
         return Set.of();
