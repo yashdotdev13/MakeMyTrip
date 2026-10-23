@@ -23,49 +23,37 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     @Override
     public UserProfileResponse createOrUpdateProfile(UserProfileRequest request) {
-
-
         Long userId = UserContextHolder.getCurrentUserId();
-
         if(userId == null){
             throw new InvalidUserContextException("User ID not found in request context");
         }
         log.debug("Creating or updating profile for userId={}",userId);
-
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseGet(UserProfile:: new);
-
         profile.setUserId(userId);
         profile.setFullName(request.getFullName());
         profile.setPhone(request.getPhone());
         profile.setAddress(request.getAddress());
         profile.setPreferences(request.getPreferences());
-
         UserProfile savedProfile = userProfileRepository.save(profile);
         log.info("User profile saved successfully for userId={}",userId);
-
         return toResponse(savedProfile);
     }
 
     @Override
     public UserProfileResponse getProfile() {
-
         Long userId = UserContextHolder.getCurrentUserId();
-
         if(userId== null){
             throw new InvalidUserContextException("User ID not found in request context");
         }
         log.debug("Fetching profile for userId={}",userId);
-
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(()->
                         new ProfileNotFoundException("Profile not found for userId="+userId));
-
         return toResponse(profile);
     }
 
     private UserProfileResponse toResponse(UserProfile profile){
-
         return new UserProfileResponse(
                 profile.getId(),
                 profile.getUserId(),
