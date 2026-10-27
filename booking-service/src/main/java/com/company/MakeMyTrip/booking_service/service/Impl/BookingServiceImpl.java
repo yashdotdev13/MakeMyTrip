@@ -262,7 +262,6 @@ public class BookingServiceImpl implements BookingService {
         log.info("Booking marked as payment failed: bookingId={}, reason={}", savedBooking.getId(),
                 event.reason());
     }
-
     private Long getRequiredUserId() {
         Long userId = UserContextHolder.getCurrentUserId();
         if (userId == null) {
