@@ -21,7 +21,6 @@ public class UserProfileController {
             @Valid @RequestBody UserProfileRequest request) {
         return ResponseEntity.ok(profileService.createOrUpdateProfile(request));
     }
-
     @GetMapping
     public ResponseEntity<UserProfileResponse> getProfile() {
         return ResponseEntity.ok(profileService.getProfile());
