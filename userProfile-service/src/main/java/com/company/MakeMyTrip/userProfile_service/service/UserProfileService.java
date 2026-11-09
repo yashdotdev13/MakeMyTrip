@@ -7,8 +7,11 @@ public interface UserProfileService {
 
 
 
+    // create or update User Profile
     UserProfileResponse createOrUpdateProfile(UserProfileRequest request);
 
+
+    // Get profile of user
     UserProfileResponse getProfile();
 
 
