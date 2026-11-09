@@ -20,7 +20,6 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
 
-
     @Override
     public UserProfileResponse createOrUpdateProfile(UserProfileRequest request) {
         Long userId = UserContextHolder.getCurrentUserId();
