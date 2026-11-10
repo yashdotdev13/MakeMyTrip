@@ -12,28 +12,15 @@ import lombok.NoArgsConstructor;
 public class UserProfileRequest {
 
     @NotBlank(message = "Full name is required")
-    @Size(
-            min = 2,
-            max = 100,
-            message = "Full name must be between 2 and 100 characters"
-    )
+    @Size(min = 2, max = 100, message = "Full name must be between 2 and 100 characters")
     private String fullName;
 
-    @Size(
-            max = 20,
-            message = "Phone number must not exceed 20 characters"
-    )
+    @Size(max = 20, message = "Phone number must not exceed 20 characters")
     private String phone;
 
-    @Size(
-            max = 255,
-            message = "Address must not exceed 255 characters"
-    )
+    @Size(max = 255, message = "Address must not exceed 255 characters")
     private String address;
 
-    @Size(
-            max = 1000,
-            message = "Preferences must not exceed 1000 characters"
-    )
+    @Size(max = 1000, message = "Preferences must not exceed 1000 characters")
     private String preferences;
 }
