@@ -11,8 +11,5 @@ public interface AgentTool {
 
     Set<String> getAllowedArguments();
 
-    Map<String, Object> execute(
-            Map<String, Object> arguments,
-            String authorization
-    );
+    Map<String, Object> execute(Map<String, Object> arguments, String authorization);
 }
