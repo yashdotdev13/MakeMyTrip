@@ -44,28 +44,18 @@ public class CrowdDemandPricingStrategy implements PricingStrategy {
         if (applicableRules.isEmpty()) {
             return StrategyResult.unchanged(context.basePrice());
         }
-
         BigDecimal adjustedPrice = context.basePrice();
-
         List<String> appliedRules = new ArrayList<>();
 
         for (PriceRule rule : applicableRules) {
-
             BigDecimal factor = rule.getFactor();
-
             if (factor == null) {
-
                 log.warn("Skipping crowd demand pricing rule because factor is null: ruleId={}", rule.getId());
-
                 continue;
             }
-
             BigDecimal priceBefore = adjustedPrice;
-
             BigDecimal adjustment = calculateAdjustment(adjustedPrice, factor);
-
             adjustedPrice = adjustedPrice.add(adjustment);
-
             appliedRules.add(buildRuleDescription(rule));
 
             log.debug("Crowd demand pricing rule applied: ruleId={}, currentBookings={}," +
@@ -73,11 +63,9 @@ public class CrowdDemandPricingStrategy implements PricingStrategy {
                     rule.getId(), currentBookings, rule.getMinQuantityThreshold(),
                     factor, priceBefore, adjustment, adjustedPrice);
         }
-
         if (appliedRules.isEmpty()) {
             return StrategyResult.unchanged(context.basePrice());
         }
-
         return new StrategyResult(adjustedPrice, List.copyOf(appliedRules));
     }
 
@@ -87,18 +75,14 @@ public class CrowdDemandPricingStrategy implements PricingStrategy {
     }
 
     private boolean isApplicable(PriceRule rule) {
-
         return Boolean.TRUE.equals(rule.getActive());
     }
 
     private boolean matchesCrowdThreshold(PriceRule rule, int currentBookings) {
-
         Integer threshold = rule.getMinQuantityThreshold();
-
         if (threshold == null) {
             return false;
         }
-
         return currentBookings >= threshold;
     }
 

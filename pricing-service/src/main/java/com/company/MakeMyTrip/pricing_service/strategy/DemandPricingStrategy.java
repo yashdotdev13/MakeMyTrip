@@ -28,102 +28,40 @@ public class DemandPricingStrategy implements PricingStrategy {
     @Override
     public StrategyResult apply(PricingContext context) {
 
-        int currentBookings =
-                context.currentBookings();
-
+        int currentBookings = context.currentBookings();
         if (currentBookings <= 0) {
-            return StrategyResult.unchanged(
-                    context.basePrice()
-            );
+            return StrategyResult.unchanged(context.basePrice());
         }
-
-        List<PriceRule> applicableRules =
-                priceRuleRepository.findByRuleType(
-                                RuleType.DEMAND
-                        )
-                        .stream()
-                        .filter(this::isApplicable)
-                        .filter(rule ->
-                                matchesDemandThreshold(
-                                        rule,
-                                        currentBookings
-                                )
-                        )
-                        .sorted(
-                                Comparator.comparing(
-                                        PriceRule::getMinQuantityThreshold,
-                                        Comparator.nullsLast(
-                                                Comparator.naturalOrder()
-                                        )
-                                )
-                        )
-                        .toList();
-
+        List<PriceRule> applicableRules = priceRuleRepository.findByRuleType(RuleType.DEMAND)
+                .stream().filter(this::isApplicable)
+                .filter(rule -> matchesDemandThreshold(rule, currentBookings))
+                .sorted(Comparator.comparing(PriceRule::getMinQuantityThreshold,
+                        Comparator.nullsLast(Comparator.naturalOrder()))).toList();
         if (applicableRules.isEmpty()) {
-            return StrategyResult.unchanged(
-                    context.basePrice()
-            );
+            return StrategyResult.unchanged(context.basePrice());
         }
-
-        BigDecimal adjustedPrice =
-                context.basePrice();
-
-        List<String> appliedRules =
-                new ArrayList<>();
+        BigDecimal adjustedPrice = context.basePrice();
+        List<String> appliedRules = new ArrayList<>();
 
         for (PriceRule rule : applicableRules) {
-
-            BigDecimal factor =
-                    rule.getFactor();
+            BigDecimal factor = rule.getFactor();
 
             if (factor == null) {
-
-                log.warn(
-                        "Skipping demand pricing rule because factor is null: ruleId={}",
-                        rule.getId()
-                );
-
+                log.warn("Skipping demand pricing rule because factor is null: ruleId={}", rule.getId());
                 continue;
             }
-
-            BigDecimal priceBefore =
-                    adjustedPrice;
-
-            BigDecimal adjustment =
-                    calculateAdjustment(
-                            adjustedPrice,
-                            factor
-                    );
-
-            adjustedPrice =
-                    adjustedPrice.add(adjustment);
-
-            appliedRules.add(
-                    buildRuleDescription(rule)
-            );
-
-            log.debug(
-                    "Demand pricing rule applied: ruleId={}, currentBookings={}, threshold={}, factor={}%, priceBefore={}, adjustment={}, priceAfter={}",
-                    rule.getId(),
-                    currentBookings,
-                    rule.getMinQuantityThreshold(),
-                    factor,
-                    priceBefore,
-                    adjustment,
-                    adjustedPrice
-            );
+            BigDecimal priceBefore = adjustedPrice;
+            BigDecimal adjustment = calculateAdjustment(adjustedPrice, factor);
+            adjustedPrice = adjustedPrice.add(adjustment);
+            appliedRules.add(buildRuleDescription(rule));
+            log.debug("Demand pricing rule applied: ruleId={}, currentBookings={}, threshold={}, factor={}%, priceBefore={}, adjustment={}, priceAfter={}",
+                    rule.getId(), currentBookings, rule.getMinQuantityThreshold(), factor, priceBefore, adjustment,
+                    adjustedPrice);
         }
-
         if (appliedRules.isEmpty()) {
-            return StrategyResult.unchanged(
-                    context.basePrice()
-            );
+            return StrategyResult.unchanged(context.basePrice());
         }
-
-        return new StrategyResult(
-                adjustedPrice,
-                List.copyOf(appliedRules)
-        );
+        return new StrategyResult(adjustedPrice, List.copyOf(appliedRules));
     }
 
     @Override
@@ -132,50 +70,23 @@ public class DemandPricingStrategy implements PricingStrategy {
     }
 
     private boolean isApplicable(PriceRule rule) {
-
-        return Boolean.TRUE.equals(
-                rule.getActive()
-        );
+        return Boolean.TRUE.equals(rule.getActive());
     }
 
-    private boolean matchesDemandThreshold(
-            PriceRule rule,
-            int currentBookings
-    ) {
+    private boolean matchesDemandThreshold(PriceRule rule, int currentBookings) {
 
-        Integer threshold =
-                rule.getMinQuantityThreshold();
-
+        Integer threshold = rule.getMinQuantityThreshold();
         if (threshold == null) {
             return false;
         }
-
         return currentBookings >= threshold;
     }
 
-    private BigDecimal calculateAdjustment(
-            BigDecimal currentPrice,
-            BigDecimal factor
-    ) {
-
-        return currentPrice
-                .multiply(factor)
-                .divide(
-                        BigDecimal.valueOf(100),
-                        4,
-                        RoundingMode.HALF_UP
-                );
+    private BigDecimal calculateAdjustment(BigDecimal currentPrice, BigDecimal factor) {
+        return currentPrice.multiply(factor).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
     }
 
-    private String buildRuleDescription(
-            PriceRule rule
-    ) {
-
-        return rule.getRuleType().name()
-                + " ("
-                + rule.getFactor()
-                + "%, threshold="
-                + rule.getMinQuantityThreshold()
-                + ")";
+    private String buildRuleDescription(PriceRule rule) {
+        return rule.getRuleType().name() + " (" + rule.getFactor() + "%, threshold=" + rule.getMinQuantityThreshold() + ")";
     }
 }
