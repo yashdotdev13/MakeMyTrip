@@ -37,9 +37,8 @@ public class ReviewController {
      * Update an existing review (only by owner)
      */
     @PutMapping("/{reviewId}")
-    public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
-            @PathVariable Long reviewId,
-            @RequestBody ReviewRequest request) {
+    public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(@PathVariable Long reviewId,
+                                                                    @RequestBody ReviewRequest request) {
 
         Long userId = UserContextHolder.getCurrentUserId();
         log.info("User {} is attempting to update reviewId={}", userId, reviewId);
@@ -79,9 +78,7 @@ public class ReviewController {
         log.info("Fetching review for userId={} and bookingId={}", userId, bookingId);
 
         return reviewService.getReviewByBookingIdAndUserId(bookingId, userId)
-                .<ResponseEntity<ApiResponse<?>>>map(review ->
-                        ResponseEntity.ok(new ApiResponse<>(review)))
-                .orElseGet(() ->
-                        ResponseEntity.ok(new ApiResponse<>("No review found for this booking")));
+                .<ResponseEntity<ApiResponse<?>>>map(review -> ResponseEntity.ok(new ApiResponse<>(review)))
+                .orElseGet(() -> ResponseEntity.ok(new ApiResponse<>("No review found for this booking")));
     }
 }
