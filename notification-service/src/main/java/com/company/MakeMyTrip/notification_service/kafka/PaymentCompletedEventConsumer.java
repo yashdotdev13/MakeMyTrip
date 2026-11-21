@@ -14,19 +14,10 @@ public class PaymentCompletedEventConsumer {
 
     private final NotificationService notificationService;
 
-    @KafkaListener(
-            topics = "payment.completed",
-            containerFactory = "paymentCompletedKafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = "payment.completed", containerFactory = "paymentCompletedKafkaListenerContainerFactory")
     public void consume(PaymentCompletedEvent event) {
-
-        log.info(
-                "Received payment completed event: paymentId={}, bookingId={}, userId={}",
-                event.paymentId(),
-                event.bookingId(),
-                event.userId()
-        );
-
+        log.info("Received payment completed event: paymentId={}, bookingId={}, userId={}",
+                event.paymentId(), event.bookingId(), event.userId());
         notificationService.sendPaymentCompletedEmail(event);
     }
 }

@@ -14,19 +14,10 @@ public class PaymentFailedEventConsumer {
 
     private final NotificationService notificationService;
 
-    @KafkaListener(
-            topics = "payment.failed",
-            containerFactory = "paymentFailedKafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = "payment.failed", containerFactory = "paymentFailedKafkaListenerContainerFactory")
     public void consume(PaymentFailedEvent event) {
-
-        log.info(
-                "Received payment failed event: bookingId={}, userId={}, reason={}",
-                event.bookingId(),
-                event.userId(),
-                event.reason()
-        );
-
+        log.info("Received payment failed event: bookingId={}, userId={}, reason={}",
+                event.bookingId(), event.userId(), event.reason());
         notificationService.sendPaymentFailedEmail(event);
     }
 }

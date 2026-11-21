@@ -14,26 +14,11 @@ public class UserRegisteredEventConsumer {
 
     private final NotificationContactStore notificationContactStore;
 
-    @KafkaListener(
-            topics = "user.registered",
-            groupId = "notification-service"
-    )
+    @KafkaListener(topics = "user.registered", groupId = "notification-service")
     public void consume(UserRegisteredEvent event) {
 
-        log.info(
-                "Received user registered event: userId={}, email={}",
-                event.userId(),
-                event.email()
-        );
-
-        notificationContactStore.saveEmail(
-                event.userId(),
-                event.email()
-        );
-
-        log.info(
-                "Notification contact stored: userId={}",
-                event.userId()
-        );
+        log.info("Received user registered event: userId={}, email={}", event.userId(), event.email());
+        notificationContactStore.saveEmail(event.userId(), event.email());
+        log.info("Notification contact stored: userId={}", event.userId());
     }
 }

@@ -19,153 +19,51 @@ import java.util.Map;
 public class KafkaConsumerConfig {
 
     @Bean
-    public ConsumerFactory<String, PaymentCompletedEvent>
-    paymentCompletedConsumerFactory() {
+    public ConsumerFactory<String, PaymentCompletedEvent> paymentCompletedConsumerFactory() {
 
         Map<String, Object> config = new HashMap<>();
-
-        config.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9092"
-        );
-
-        config.put(
-                ConsumerConfig.GROUP_ID_CONFIG,
-                "notification-service"
-        );
-
-        config.put(
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                "latest"
-        );
-
-        config.put(
-                ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
-                false
-        );
-
-        config.put(
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class
-        );
-
-        config.put(
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                JsonDeserializer.class
-        );
-
-        JsonDeserializer<PaymentCompletedEvent> deserializer =
-                new JsonDeserializer<>(
-                        PaymentCompletedEvent.class
-                );
-
-        deserializer.addTrustedPackages(
-                "com.company.MakeMyTrip.events"
-        );
-
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service");
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        JsonDeserializer<PaymentCompletedEvent> deserializer = new JsonDeserializer<>(PaymentCompletedEvent.class);
+        deserializer.addTrustedPackages("com.company.MakeMyTrip.events");
         deserializer.setUseTypeHeaders(false);
-
-        return new DefaultKafkaConsumerFactory<>(
-                config,
-                new StringDeserializer(),
-                deserializer
-        );
+        return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), deserializer);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<
-            String,
-            PaymentCompletedEvent
-            >
-    paymentCompletedKafkaListenerContainerFactory(
-            ConsumerFactory<String, PaymentCompletedEvent>
-                    consumerFactory
-    ) {
-
-        ConcurrentKafkaListenerContainerFactory<
-                String,
-                PaymentCompletedEvent
-                > factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
+    public ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent> paymentCompletedKafkaListenerContainerFactory(ConsumerFactory<String,
+            PaymentCompletedEvent> consumerFactory) {
+        ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
-
         return factory;
     }
 
 
     @Bean
-    public ConsumerFactory<String, PaymentFailedEvent>
-    paymentFailedConsumerFactory() {
+    public ConsumerFactory<String, PaymentFailedEvent> paymentFailedConsumerFactory() {
 
         Map<String, Object> config = new HashMap<>();
-
-        config.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9092"
-        );
-
-        config.put(
-                ConsumerConfig.GROUP_ID_CONFIG,
-                "notification-service"
-        );
-
-        config.put(
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                "latest"
-        );
-
-        config.put(
-                ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
-                false
-        );
-
-        config.put(
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class
-        );
-
-        config.put(
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                JsonDeserializer.class
-        );
-
-        JsonDeserializer<PaymentFailedEvent> deserializer =
-                new JsonDeserializer<>(
-                        PaymentFailedEvent.class
-                );
-
-        deserializer.addTrustedPackages(
-                "com.company.MakeMyTrip.events"
-        );
-
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service");
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        JsonDeserializer<PaymentFailedEvent> deserializer = new JsonDeserializer<>(PaymentFailedEvent.class);
+        deserializer.addTrustedPackages("com.company.MakeMyTrip.events");
         deserializer.setUseTypeHeaders(false);
-
-        return new DefaultKafkaConsumerFactory<>(
-                config,
-                new StringDeserializer(),
-                deserializer
-        );
+        return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), deserializer);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<
-            String,
-            PaymentFailedEvent
-            >
-    paymentFailedKafkaListenerContainerFactory(
-            ConsumerFactory<String, PaymentFailedEvent>
-                    consumerFactory
-    ) {
-
-        ConcurrentKafkaListenerContainerFactory<
-                String,
-                PaymentFailedEvent
-                > factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-
+    public ConcurrentKafkaListenerContainerFactory<String, PaymentFailedEvent> paymentFailedKafkaListenerContainerFactory(ConsumerFactory<String,
+            PaymentFailedEvent> consumerFactory) {
+        ConcurrentKafkaListenerContainerFactory<String, PaymentFailedEvent> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
-
         return factory;
     }
 }
