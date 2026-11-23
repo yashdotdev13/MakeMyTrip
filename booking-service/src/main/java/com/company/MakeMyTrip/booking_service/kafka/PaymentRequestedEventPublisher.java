@@ -20,51 +20,24 @@ public class PaymentRequestedEventPublisher {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public void publish(
-            Long bookingId,
-            Long userId,
-            BigDecimal amount,
-            String paymentMethod
-    ) {
+    public void publish(Long bookingId, Long userId, BigDecimal amount, String paymentMethod) {
 
-        PaymentRequestedEvent event = new PaymentRequestedEvent(
-                UUID.randomUUID().toString(),
-                bookingId,
-                userId,
-                amount,
-                paymentMethod,
-                Instant.now()
-        );
+        PaymentRequestedEvent event = new PaymentRequestedEvent(UUID.randomUUID().toString(), bookingId,
+                userId, amount, paymentMethod, Instant.now());
 
-        CompletableFuture<SendResult<String, Object>> future =
-                kafkaTemplate.send(
-                        KafkaTopics.PAYMENT_REQUESTED,
-                        bookingId.toString(),
-                        event
-                );
+        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(KafkaTopics.PAYMENT_REQUESTED,
+                bookingId.toString(), event);
 
         future.whenComplete((result, exception) -> {
 
             if (exception != null) {
-
-                log.error(
-                        "Failed to publish payment requested event: bookingId={}, userId={}",
-                        bookingId,
-                        userId,
-                        exception
-                );
-
+                log.error("Failed to publish payment requested event: bookingId={}, userId={}",
+                        bookingId, userId, exception);
                 return;
             }
-
-            log.info(
-                    "Payment requested event published successfully: bookingId={}, userId={}, topic={}, partition={}, offset={}",
-                    bookingId,
-                    userId,
-                    result.getRecordMetadata().topic(),
-                    result.getRecordMetadata().partition(),
-                    result.getRecordMetadata().offset()
-            );
+            log.info("Payment requested event published successfully: bookingId={}, userId={}, topic={}, " +
+                    "partition={}, offset={}", bookingId, userId, result.getRecordMetadata().topic(),
+                    result.getRecordMetadata().partition(), result.getRecordMetadata().offset());
         });
     }
 }

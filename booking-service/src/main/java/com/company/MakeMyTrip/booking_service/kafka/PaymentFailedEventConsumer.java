@@ -15,18 +15,10 @@ public class PaymentFailedEventConsumer {
 
     private final BookingService bookingService;
 
-    @KafkaListener(
-            topics = KafkaTopics.PAYMENT_FAILED,
-            containerFactory = "paymentFailedKafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = KafkaTopics.PAYMENT_FAILED, containerFactory =
+            "paymentFailedKafkaListenerContainerFactory")
     public void consume(PaymentFailedEvent event) {
-
-        log.warn(
-                "Received payment failed event: bookingId={}, reason={}",
-                event.bookingId(),
-                event.reason()
-        );
-
+        log.warn("Received payment failed event: bookingId={}, reason={}", event.bookingId(), event.reason());
         bookingService.handlePaymentFailed(event);
     }
 }

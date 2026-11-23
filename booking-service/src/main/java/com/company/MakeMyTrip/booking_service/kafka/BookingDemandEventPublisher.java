@@ -21,55 +21,26 @@ public class BookingDemandEventPublisher {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public void publish(
-            Long bookingId,
-            Long referenceId,
-            String bookingType,
-            Integer quantity,
-            String travelDate,
-            BookingDemandEventType eventType
-    ) {
+    public void publish(Long bookingId, Long referenceId, String bookingType, Integer quantity,
+                        String travelDate, BookingDemandEventType eventType) {
 
-        BookingDemandEvent event = new BookingDemandEvent(
-                UUID.randomUUID().toString(),
-                bookingId,
-                referenceId,
-                bookingType,
-                quantity,
-                travelDate,
-                eventType,
-                Instant.now()
-        );
+        BookingDemandEvent event = new BookingDemandEvent(UUID.randomUUID().toString(),
+                bookingId, referenceId, bookingType, quantity, travelDate, eventType, Instant.now());
 
-        CompletableFuture<SendResult<String, Object>> future =
-                kafkaTemplate.send(
-                        KafkaTopics.BOOKING_DEMAND,
-                        bookingId.toString(),
-                        event
-                );
+        CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send(KafkaTopics.BOOKING_DEMAND,
+                bookingId.toString(), event);
 
         future.whenComplete((result, exception) -> {
 
             if (exception != null) {
-                log.error(
-                        "Failed to publish booking demand event: bookingId={}, referenceId={}, eventType={}",
-                        bookingId,
-                        referenceId,
-                        eventType,
-                        exception
-                );
+                log.error("Failed to publish booking demand event: bookingId={}, referenceId={}, eventType={}",
+                        bookingId, referenceId, eventType, exception);
                 return;
             }
-
-            log.info(
-                    "Booking demand event published successfully: bookingId={}, referenceId={}, eventType={}, topic={}, partition={}, offset={}",
-                    bookingId,
-                    referenceId,
-                    eventType,
-                    result.getRecordMetadata().topic(),
-                    result.getRecordMetadata().partition(),
-                    result.getRecordMetadata().offset()
-            );
+            log.info("Booking demand event published successfully: bookingId={}, referenceId={}, eventType={}, " +
+                    "topic={}, partition={}, offset={}", bookingId, referenceId, eventType,
+                    result.getRecordMetadata().topic(), result.getRecordMetadata().partition(),
+                    result.getRecordMetadata().offset());
         });
     }
 }

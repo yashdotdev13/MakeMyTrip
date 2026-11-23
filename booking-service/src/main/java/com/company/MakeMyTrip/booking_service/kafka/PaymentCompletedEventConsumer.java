@@ -15,18 +15,12 @@ public class PaymentCompletedEventConsumer {
 
     private final BookingService bookingService;
 
-    @KafkaListener(
-            topics = KafkaTopics.PAYMENT_COMPLETED,
-            containerFactory = "paymentCompletedKafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = KafkaTopics.PAYMENT_COMPLETED, containerFactory =
+            "paymentCompletedKafkaListenerContainerFactory")
     public void consume(PaymentCompletedEvent event) {
 
-        log.info(
-                "Received payment completed event: paymentId={}, bookingId={}, transactionId={}",
-                event.paymentId(),
-                event.bookingId(),
-                event.transactionId()
-        );
+        log.info("Received payment completed event: paymentId={}, bookingId={}, transactionId={}",
+                event.paymentId(), event.bookingId(), event.transactionId());
 
         bookingService.handlePaymentCompleted(event);
     }
