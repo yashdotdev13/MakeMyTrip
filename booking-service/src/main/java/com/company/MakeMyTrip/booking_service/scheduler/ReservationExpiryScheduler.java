@@ -18,10 +18,7 @@ public class ReservationExpiryScheduler {
         int expiredCount = reservationService.expireDueReservations();
 
         if (expiredCount > 0) {
-            log.info(
-                    "Expired {} reservations and released their inventory",
-                    expiredCount
-            );
+            log.info("Expired {} reservations and released their inventory", expiredCount);
         }
     }
 }
